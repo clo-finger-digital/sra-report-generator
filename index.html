@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SRA Report Automation Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased">
     <div class="max-w-4xl mx-auto px-4 py-12">
         <header class="border-b border-slate-800 pb-6 mb-8">
             <h1 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">SRA Report Pipeline Hub</h1>
-            <p class="mt-2 text-sm text-slate-400">Automated Security Risk Assessment Generation Interface</p>
+            <p class="mt-2 text-sm text-slate-400">Execute python compilation inside the browser via GitHub Pages</p>
         </header>
 
         <main class="space-y-6">
@@ -19,37 +20,168 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Company Name</label>
-                        <input type="text" value="SunnyVision Limited" readonly class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-300 focus:outline-none">
+                        <input type="text" id="company_name" value="SunnyVision Limited" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Company Abbreviation</label>
-                        <input type="text" value="SV" readonly class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-300 focus:outline-none">
+                        <input type="text" id="company_abbr" value="SV" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
                 </div>
             </section>
 
-            <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-slate-800 p-5 rounded-lg border border-slate-700 shadow-md">
-                    <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Telemetry Parsing</span>
-                    <div class="mt-2 flex items-center space-x-2">
-                        <span class="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span class="text-lg font-semibold text-white">Active Alignment</span>
+            <section class="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-xl space-y-4">
+                <h2 class="text-xl font-bold text-white mb-2">Data Source File Uploads</h2>
+                <p class="text-xs text-slate-400 mb-4">Upload your assessment source files below to process them locally inside your browser.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">1. SRA Word Template (.docx)</label>
+                        <input type="file" id="file_template" accept=".docx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
+                    </div>
+
+                    <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">2. WAB Work Assignment (.docx)</label>
+                        <input type="file" id="file_wab" accept=".docx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
+                    </div>
+
+                    <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">3. Asset Inventory (.xlsx)</label>
+                        <input type="file" id="file_inventory" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
+                    </div>
+
+                    <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">4. Findings & Vulnerabilities (.xlsx)</label>
+                        <input type="file" id="file_vulnerability" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
                     </div>
                 </div>
-                <div class="bg-slate-800 p-5 rounded-lg border border-slate-700 shadow-md">
-                    <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Sanitization Engine</span>
-                    <span class="block mt-2 text-lg font-semibold text-white">Asterisks Purged</span>
+
+                <div class="pt-4">
+                    <button id="run_pipeline_btn" onclick="executePythonPipeline()" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-3 px-4 rounded transition duration-200 shadow-lg disabled:opacity-50">
+                        Compile SRA Report
+                    </button>
                 </div>
-                <div class="bg-slate-800 p-5 rounded-lg border border-slate-700 shadow-md">
-                    <span class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Section 4 Protection Matrix</span>
-                    <span class="block mt-2 text-lg font-semibold text-sky-400 font-mono">Immutable Locked [145-165]</span>
-                </div>
+            </section>
+
+            <section class="bg-slate-950 rounded-lg border border-slate-800 p-4 shadow-inner">
+                <span class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">System Execution Log</span>
+                <pre id="console_output" class="text-xs font-mono text-emerald-400 overflow-x-auto whitespace-pre-wrap max-h-64">System initialized. Waiting for source files...</pre>
             </section>
         </main>
-
-        <footer class="mt-12 border-t border-slate-800 pt-6 text-center text-xs text-slate-500">
-            <p>SRA Generation Framework • Configured for GitHub Pages Deployment</p>
-        </footer>
     </div>
+
+    <script>
+        let pyodideModule = null;
+
+        async function initPyodide() {
+            logToConsole("Loading inline browser environment...");
+            pyodideModule = await loadPyodide();
+            await pyodideModule.loadPackage(["pandas", "openpyxl"]);
+            logToConsole("Environment Ready. System dependencies successfully loaded.");
+        }
+        initPyodide();
+
+        function logToConsole(message) {
+            const out = document.getElementById("console_output");
+            out.textContent += "\n" + message;
+            out.scrollTop = out.scrollHeight;
+        }
+
+        async function getFileBytes(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el.files || el.files.length === 0) return null;
+            const file = el.files[0];
+            const buffer = await file.arrayBuffer();
+            return { name: file.name, data: new Uint8Array(buffer) };
+        }
+
+        async function executePythonPipeline() {
+            if (!pyodideModule) return alert("System runtime is still initializing. Please wait.");
+            
+            // Extract UI Inputs
+            const cName = document.getElementById("company_name").value;
+            const cAbbr = document.getElementById("company_abbr").value;
+
+            // Fetch Uploaded Binary Streams
+            const templateFile = await getFileBytes("file_template");
+            const wabFile = await getFileBytes("file_wab");
+            const inventoryFile = await getFileBytes("file_inventory");
+            const vulnerabilityFile = await getFileBytes("file_vulnerability");
+
+            if (!templateFile || !wabFile) {
+                logToConsole("Aborted: SRA Word Template and WAB file must be uploaded before compilation.");
+                return;
+            }
+
+            // Write File Streams into Pyodide Virtual File System (FS)
+            pyodideModule.FS.writeFile(templateFile.name, templateFile.data);
+            pyodideModule.FS.writeFile(wabFile.name, wabFile.data);
+            if (inventoryFile) pyodideModule.FS.writeFile(inventoryFile.name, inventoryFile.data);
+            if (vulnerabilityFile) pyodideModule.FS.writeFile(vulnerabilityFile.name, vulnerabilityFile.data);
+
+            logToConsole("Injecting uploaded data into the WebAssessment runtime filesystem...");
+
+            // Native configuration maps injected dynamically into Pyodide execution block
+            pyodideModule.globals.set("JS_COMPANY_NAME", cName);
+            pyodideModule.globals.set("JS_COMPANY_ABBREVIATION", cAbbr);
+
+            // ==============================================================================
+            // LOCATION TO ADD CODE: The unmodified Python compilation logic goes inside this string block
+            // ==============================================================================
+            const pythonScript = `
+import os
+import sys
+import re
+import pandas as pd
+
+# Fallback wrapper redirecting sys stdout stream straight into our JavaScript console log engine
+class BrowserLogRedirect:
+    def write(self, s):
+        import js
+        js.logToConsole(s.strip())
+    def flush(self): pass
+
+sys.stdout = BrowserLogRedirect()
+
+# Read variable inputs from the browser fields
+company_name = JS_COMPANY_NAME
+company_abbr = JS_COMPANY_ABBREVIATION
+
+print(f"Executing pipeline for {company_name} ({company_abbr})...")
+
+# ------------------------------------------------------------------------------
+# PLACE YOUR ORIGINAL UNCHANGED PYTHON PROCESSING SCRIPT BELOW HERE
+# (Keep identify_data_sources, process_dynamic_telemetry, etc. untouched)
+# ------------------------------------------------------------------------------
+
+def run_in_browser():
+    # Inside your processing engine, map paths dynamically from the uploaded filenames:
+    # paths = identify_data_sources()
+    # telemetry = process_dynamic_telemetry(paths, company_name, company_abbr)
+    # output_recreation_report(paths, telemetry, "Generated_SRA_Report_Final.docx")
+    print("Compilation Complete. Writing final report bytes to host download target...")
+
+run_in_browser()
+`;
+
+            try {
+                // Execute Python script inside the browser sandbox
+                await pyodideModule.runPythonAsync(pythonScript);
+                
+                // Extract compiled file back from Virtual FS to Trigger Download
+                const outputBytes = pyodideModule.FS.readFile("Generated_SRA_Report_Final.docx");
+                const blob = new Blob([outputBytes], { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "Generated_SRA_Report_Final.docx";
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                logToConsole("Report compiled and generated successfully!");
+            } catch (err) {
+                logToConsole("Execution Error: " + err.message);
+            }
+        }
+    </script>
 </body>
 </html>
