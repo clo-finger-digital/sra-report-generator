@@ -145,16 +145,17 @@
                 return;
             }
 
-            // Fetch and load template dynamically using explicit case matching to prevent FS errors
-            logToConsole("Pulling 'new SRA report template.docx' from GitHub repository asset layer...");
+            // URL-encoded fetch string targets to handle spaces inside static filenames natively
+            logToConsole("Pulling 'new SRA report template.docx' via relative URL request network hook...");
             try {
-                const response = await fetch("new SRA report template.docx");
-                if (!response.ok) throw new Error("Template file download failed. Verify it exists in your repository root.");
+                const response = await fetch("./new%20SRA%20report%20template.docx");
+                if (!response.ok) throw new Error("Network response error: Code 404. Make sure 'new SRA report template.docx' is in the root repository path.");
                 const templateBuffer = await response.arrayBuffer();
                 const templateData = new Uint8Array(templateBuffer);
                 
-                try { pyodideModule.FS.unlink("new SRA report template.docx"); } catch(e){}
-                pyodideModule.FS.writeFile("new SRA report template.docx", templateData);
+                try { pyodideModule.FS.unlink("new_sra_template.docx"); } catch(e){}
+                pyodideModule.FS.writeFile("new_sra_template.docx", templateData);
+                logToConsole("Successfully mounted repository template document to Virtual File System.");
             } catch (err) {
                 logToConsole("FS Error Setup: " + err.message);
                 return;
@@ -206,7 +207,7 @@ try:
     import pandas as pd
     import openpyxl
     from docx import Document
-    print("Python Runtime: 'pandas', 'openpyxl', and 'docx' modules verified and fully operational!")
+    print("Python Runtime: All core third-party analytical modules successfully bound.")
 except ImportError as e:
     print(f"Runtime Warning: Critical library component missing - {str(e)}")
 
@@ -218,9 +219,10 @@ sys_abbr = JS_SYSTEM_ABBREVIATION
 print(f"Executing automation pipeline for: {sys_name} ({sys_abbr})")
 
 def identify_data_sources():
+    # Force alignment to the explicitly verified virtual filename layout mounted by JS
     return {
         "wab": JS_WAB_NAME,
-        "sra_template": "new SRA report template.docx",
+        "sra_template": "new_sra_template.docx",
         "inventory": JS_INV_NAME,
         "vulnerability": JS_VUN_NAME,
         "questions": JS_Q_NAME,
@@ -604,7 +606,7 @@ def output_recreation_report(paths, data, filename):
                     cell.text = remove_asterisk_pointers(cell.text)
 
     doc.save(filename)
-    print("Compilation complete.")
+    print("Compilation complete. Ready to down-stream file download.")
 
 def apply_border(cell, color="000000", size="4", thick=False):
     from docx.oxml import parse_xml
