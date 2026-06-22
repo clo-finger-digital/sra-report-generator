@@ -250,7 +250,7 @@ def process_dynamic_telemetry(paths):
         except Exception:
             return pd.DataFrame()
 
-    testee_name, testee_abbr = "Digital Policy Office", "DPO"
+    testee_name, testee_abbr = "Education Bureau", "EDB"
     scope_paragraphs, objective_paragraphs, security_requirements = [], [], []
     system_description_text = ""
     asset_rows = []
@@ -366,8 +366,12 @@ def process_dynamic_telemetry(paths):
                 for _, row in s9_df.dropna(subset=[id_col]).iterrows():
                     f_id = str(row[id_col]).strip()
                     if f_id == 'nan' or not f_id: continue
-                    raw_rtg = str(row[rate_col]).strip() if rate_col in s9_df.columns else "Low"
-                    norm_rtg = "AOI" if "aoi" in raw_rtg.lower() or "interest" in raw_rtg.lower() else raw_rtg.capitalize()
+                    raw_rtg = str(row[rate_col]).strip().lower()
+                    
+                    if "high" in raw_rtg: norm_rtg = "High"
+                    elif "medium" in raw_rtg: norm_rtg = "Medium"
+                    elif "aoi" in raw_rtg or "interest" in raw_rtg: norm_rtg = "AOI"
+                    else: norm_rtg = "Low"
                     
                     raw_ips = str(row[asset_col]).strip().replace(" ", "").split(",")
                     formatted_ips = "\\n".join(raw_ips)
@@ -432,26 +436,26 @@ def output_recreation_report(paths, data, filename):
     doc = Document(paths["sra_template"])
     risk_tier_string = f"{data['totals']['Medium']} Medium, {data['totals']['Low']} low risk and {data['totals']['AOI']} AOI items"
 
-    # Deep mapping registry handling all split and dynamic variations of keywords
-    replacements = {
-        "information system name (information system abbreviation)": f"{data['sys_name']} ({data['sys_abbr']})",
-        "(INFORMATION SYSTEM ABBREVIATION)": data["sys_abbr"],
-        "information system name": data["sys_name"],
-        "SEMISSpW23": data["sys_abbr"],
-        "amount of total items identified": f"{data['grand_total']} items",
-        "amount of total items": f"{data['grand_total']} items",
-        "grand total items identified": risk_tier_string,
-        "grand total items": risk_tier_string,
-        "company name (company abbreviation)": f"{data['company_name']} ({data['company_abbr']})",
-        "company name": data["company_name"],
-        "company abbreviation": data["company_abbr"],
-        "COMPANY ABBREVIATION": data["company_abbr"],
-        "testee name (testee abbreviation)": f"{data['testee_name']} ({data['testee_abbr']})",
-        "testee name": data["testee_name"],
-        "testee abbreviation": data["testee_abbr"],
-        "amount of total items identified": f"{data['grand_total']} items",
-        "*grand total items*": risk_tier_string
-    }
+    # Explicit literal definitions paired to prevent substring stripping mutations inside Pyodide threads
+    replacements = [
+        ("information system name (information system abbreviation)", f"{data['sys_name']} ({data['sys_abbr']})"),
+        ("*(INFORMATION SYSTEM ABBREVIATION)*", data["sys_abbr"]),
+        ("(INFORMATION SYSTEM ABBREVIATION)", data["sys_abbr"]),
+        ("information system name", data["sys_name"]),
+        ("SEMISSpW23", data["sys_abbr"]),
+        ("amount of total items identified", f"{data['grand_total']} items"),
+        ("amount of total items", f"{data['grand_total']} items"),
+        ("grand total items identified", risk_tier_string),
+        ("grand total items", risk_tier_string),
+        ("company name (company abbreviation)", f"{data['company_name']} ({data['company_abbr']})"),
+        ("company name", data["company_name"]),
+        ("company abbreviation", data["company_abbr"]),
+        ("COMPANY ABBREVIATION", data["company_abbr"]),
+        ("testee name (testee abbreviation)", f"{data['testee_name']} ({data['testee_abbr']})"),
+        ("testee name", data["testee_name"]),
+        ("testee abbreviation", data["testee_abbr"]),
+        ("*grand total items*", risk_tier_string)
+    ]
 
     def update_cell_text_preserving_runs(cell, new_text, font_name="Times New Roman", size_pt=10, align_center=False):
         if len(cell.paragraphs) == 0: cell.add_paragraph()
@@ -479,25 +483,24 @@ def output_recreation_report(paths, data, filename):
     def remove_asterisk_pointers(text):
         return re.sub(r'\\*.*?\\*', '', text).strip()
 
-    # Advanced Global Aggregator sweeping split XML nodes
-    def replace_text_in_paragraph(p, lookup_dict):
+    # Fixed Paragraph Assembler applying safe word bounds to block character breakdown leaks
+    def replace_text_in_paragraph(p, lookup_tuples):
         full_text = "".join(run.text for run in p.runs)
         if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
             return
             
         modified = False
-        for k in sorted(lookup_dict.keys(), key=len, reverse=True):
+        # Sequentially inject complete units before running breakdown substrings
+        for k, val in lookup_tuples:
             cleaned_key = k.strip("*").strip()
-            # Intercept loose string variations inside table frames
             if k.lower() in full_text.lower() or cleaned_key.lower() in full_text.lower():
                 pattern = re.compile(re.escape(k), re.IGNORECASE)
-                full_text = pattern.sub(lookup_dict[k], full_text)
+                full_text = pattern.sub(val, full_text)
                 pattern_clean = re.compile(re.escape(cleaned_key), re.IGNORECASE)
-                full_text = pattern_clean.sub(lookup_dict[k], full_text)
+                full_text = pattern_clean.sub(val, full_text)
                 modified = True
                 
         if modified:
-            full_text = remove_asterisk_pointers(full_text)
             if p.runs:
                 p.runs[0].text = full_text
                 for r in p.runs[1:]: r.text = ""
@@ -511,7 +514,7 @@ def output_recreation_report(paths, data, filename):
         p_element.addnext(new_p._p)
         return new_p
 
-    # Container Sweep Loop 1: Core Document Flow
+    # Container Sweep Loop 1: Core Document Body Flow
     for p_idx, p in enumerate(list(doc.paragraphs)):
         full_p_text = "".join(run.text for run in p.runs)
         normalized_p_text = full_p_text.replace('\\n', ' ').strip()
@@ -519,34 +522,34 @@ def output_recreation_report(paths, data, filename):
         if 145 <= p_idx <= 165: continue
 
         if "copy from WAB, 4.1.1 Current Environment Description" in normalized_p_text or "copy from WAB, 9.1 System Description" in normalized_p_text:
-            p.text = remove_asterisk_pointers(data["system_description"])
+            p.text = data["system_description"]
         elif "insert all under brief of work assignment under category b, 1. Scope of the services, 1.1" in normalized_p_text:
             if len(data["scope_paragraphs"]) > 0:
-                p.text = remove_asterisk_pointers(data["scope_paragraphs"][0])
+                p.text = data["scope_paragraphs"][0]
                 p.style = 'List Bullet'
                 current_anchor = p
                 for msg in data["scope_paragraphs"][1:]:
-                    current_anchor = insert_paragraph_after(current_anchor, remove_asterisk_pointers(msg), style='List Bullet')
+                    current_anchor = insert_paragraph_after(current_anchor, msg, style='List Bullet')
             else: p.text = ""
         elif "copy from work assignment under category b, all under 3. Project objectives" in normalized_p_text:
             if len(data["objective_paragraphs"]) > 0:
-                p.text = remove_asterisk_pointers(data["objective_paragraphs"][0])
+                p.text = data["objective_paragraphs"][0]
                 p.style = 'List Bullet'
                 current_anchor = p
                 for msg in data["objective_paragraphs"][1:]:
-                    current_anchor = insert_paragraph_after(current_anchor, remove_asterisk_pointers(msg), style='List Bullet')
+                    current_anchor = insert_paragraph_after(current_anchor, msg, style='List Bullet')
             else: p.text = ""
         elif "copy from WAB section 4.4" in normalized_p_text:
             p.text = f"{data['company_abbr']} referred to the following documents in conducting the security risk assessment:"
             current_anchor = p
             for msg in data["security_requirements"]:
-                current_anchor = insert_paragraph_after(current_anchor, remove_asterisk_pointers(msg), style='List Bullet')
+                current_anchor = insert_paragraph_after(current_anchor, msg, style='List Bullet')
         elif "copy from follow up plan" in normalized_p_text.lower() or "copy from this document table" in normalized_p_text.lower():
             p.text = ""
         else:
             replace_text_in_paragraph(p, replacements)
 
-    # Container Sweep Loop 2: Section Headers & Footers Margins
+    # Container Sweep Loop 2: Section Margin Headers & Footers
     for section in doc.sections:
         for header_p in section.header.paragraphs:
             replace_text_in_paragraph(header_p, replacements)
@@ -555,11 +558,10 @@ def output_recreation_report(paths, data, filename):
 
     vulnerability_table_count = 0
 
-    # Container Sweep Loop 3: Tables Matrix Grid cells & Inline Shapes
+    # Container Sweep Loop 3: Grid Cells Matrix and Embedded Objects
     for table_idx, table in enumerate(doc.tables):
         if len(table.rows) == 0 or len(table.rows[0].cells) == 0: continue
         
-        # Injector Scanner inside every table cell paragraph element
         for row in table.rows:
             for cell in row.cells:
                 for cell_p in cell.paragraphs:
