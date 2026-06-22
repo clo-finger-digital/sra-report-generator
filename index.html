@@ -231,7 +231,6 @@ sys_abbr = JS_SYSTEM_ABBREVIATION
 testee_name = JS_TESTEE_NAME
 testee_abbr = JS_TESTEE_ABBREVIATION
 
-# Consolidated production formatting date constants
 current_date_text = "June 2026"
 current_date_numeric = "22-06-2026"
 
@@ -455,6 +454,9 @@ def output_recreation_report(paths, data, filename):
         ("*grand total items*", risk_tier_string)
     ]
 
+    # Persistent global filter lock variable
+    global_allow_edits = False
+
     def update_cell_text_preserving_runs(cell, new_text, font_name="Times New Roman", size_pt=10, align_center=False):
         if len(cell.paragraphs) == 0: cell.add_paragraph()
         p = cell.paragraphs[0]
@@ -482,9 +484,14 @@ def output_recreation_report(paths, data, filename):
         return text.replace("*", "").strip()
 
     def replace_text_in_paragraph(p, lookup_tuples):
+        global global_allow_edits
         full_text = "".join(run.text for run in p.runs)
         
-        # PRIORITIZED HIGH-PRIORITY EXCEPTION: Bypasses filters if this specific block is matched
+        # Priority check: If anchor line is found, unlock editing permanently for the rest of Section 4
+        if "tier 3 information system risk ranking matrix" in full_text.lower():
+            global_allow_edits = True
+
+        # Strict Multi-Line/Split character matching catcher for the target paragraph 
         lower_full = full_text.lower().replace(" ", "").replace("\\n", "")
         if "reviewandinterview" in lower_full and "checklists" in lower_full:
             full_text = f"Review and interview sessions to check the security compliance of information systems of {testee_abbr} using security checklists were conducted by {company_abbr}. The following security domains were covered in the security review:"
@@ -495,9 +502,10 @@ def output_recreation_report(paths, data, filename):
                 p.text = full_text
             return
 
-        # General Section 4 methodology boilerplate lockdown filter rule
-        if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
-            return
+        # Core section blocker: Active ONLY if we have not passed the Matrix Table label anchor
+        if not global_allow_edits:
+            if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
+                return
 
         modified = False
         for k, val in lookup_tuples:
@@ -529,7 +537,7 @@ def output_recreation_report(paths, data, filename):
         full_p_text = "".join(run.text for run in p.runs)
         normalized_p_text = full_p_text.replace('\\n', ' ').strip()
         
-        # Title cover page selector rule targeting: May 2026 / June 2026 layout lines
+        # Enforced strict [Month] [Year] title cover formatting selector rule
         if p_idx < 15 and ("may 2026" in normalized_p_text.lower() or "june 2026" in normalized_p_text.lower()):
             p.text = current_date_text
             for run in p.runs:
