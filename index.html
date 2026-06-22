@@ -35,6 +35,14 @@
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Information System Abbreviation</label>
                         <input type="text" id="system_abbr" value="SEMIS" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Testee Name</label>
+                        <input type="text" id="testee_name" value="Education Bureau" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Testee Abbreviation</label>
+                        <input type="text" id="testee_abbr" value="EDB" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                    </div>
                 </div>
             </section>
 
@@ -133,6 +141,8 @@
             const cAbbr = document.getElementById("company_abbr").value;
             const sName = document.getElementById("system_name").value;
             const sAbbr = document.getElementById("system_abbr").value;
+            const tName = document.getElementById("testee_name").value;
+            const tAbbr = document.getElementById("testee_abbr").value;
 
             const wabFile = await getFileBytes("file_wab");
             const inventoryFile = await getFileBytes("file_inventory");
@@ -183,6 +193,8 @@
             pyodideModule.globals.set("JS_COMPANY_ABBREVIATION", cAbbr);
             pyodideModule.globals.set("JS_SYSTEM_NAME", sName);
             pyodideModule.globals.set("JS_SYSTEM_ABBREVIATION", sAbbr);
+            pyodideModule.globals.set("JS_TESTEE_NAME", tName);
+            pyodideModule.globals.set("JS_TESTEE_ABBREVIATION", tAbbr);
             pyodideModule.globals.set("JS_WAB_NAME", wabFile.name);
             pyodideModule.globals.set("JS_INV_NAME", inventoryFile ? inventoryFile.name : null);
             pyodideModule.globals.set("JS_VUN_NAME", vulnerabilityFile ? vulnerabilityFile.name : null);
@@ -209,7 +221,7 @@ try:
     from docx import Document
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Pt, RGBColor
-    print("Python Runtime: Framework packages and styling bindings successfully verified.")
+    print("Python Runtime: Engine operational.")
 except ImportError as e:
     print(f"Runtime Warning: Critical library component missing - {str(e)}")
 
@@ -217,6 +229,8 @@ company_name = JS_COMPANY_NAME
 company_abbr = JS_COMPANY_ABBREVIATION
 sys_name = JS_SYSTEM_NAME
 sys_abbr = JS_SYSTEM_ABBREVIATION
+testee_name = JS_TESTEE_NAME
+testee_abbr = JS_TESTEE_ABBREVIATION
 
 print(f"Executing automation pipeline for: {sys_name} ({sys_abbr})")
 
@@ -250,7 +264,6 @@ def process_dynamic_telemetry(paths):
         except Exception:
             return pd.DataFrame()
 
-    testee_name, testee_abbr = "Education Bureau", "EDB"
     scope_paragraphs, objective_paragraphs, security_requirements = [], [], []
     system_description_text = ""
     asset_rows = []
@@ -260,21 +273,6 @@ def process_dynamic_telemetry(paths):
     if paths["wab"]:
         try:
             wab_doc = Document(paths["wab"])
-            found_testee = False
-            for p in wab_doc.paragraphs:
-                txt_clean = p.text.strip()
-                if "invited to provide the following services" in txt_clean.lower():
-                    found_testee = True
-                if found_testee and "for the" in txt_clean.lower():
-                    match_parts = re.split(r'for the', txt_clean, flags=re.IGNORECASE)
-                    if len(match_parts) > 1:
-                        testee_name = match_parts[1].split('\\n')[0].strip()
-                        abbr_match = re.findall(r'\\(([A-Z]{2,6})\\)', testee_name)
-                        if abbr_match:
-                            testee_abbr = abbr_match[0]
-                            testee_name = testee_name.split('(')[0].strip()
-                        break
-
             capture_scope, capture_obj, capture_desc, capture_req = False, False, False, False
             for p in wab_doc.paragraphs:
                 txt = "".join(run.text for run in p.runs).strip()
@@ -436,8 +434,9 @@ def output_recreation_report(paths, data, filename):
     doc = Document(paths["sra_template"])
     risk_tier_string = f"{data['totals']['Medium']} Medium, {data['totals']['Low']} low risk and {data['totals']['AOI']} AOI items"
 
-    # Explicit literal definitions paired to prevent substring stripping mutations inside Pyodide threads
+    # Enforced literal ordering prevents smaller components from intercepting global macro brackets first
     replacements = [
+        ("*information system name (information system abbreviation)*", f"{data['sys_name']} ({data['sys_abbr']})"),
         ("information system name (information system abbreviation)", f"{data['sys_name']} ({data['sys_abbr']})"),
         ("*(INFORMATION SYSTEM ABBREVIATION)*", data["sys_abbr"]),
         ("(INFORMATION SYSTEM ABBREVIATION)", data["sys_abbr"]),
@@ -480,17 +479,16 @@ def output_recreation_report(paths, data, filename):
                 run.bold = bold
                 if color_rgb is not None: run.font.color.rgb = color_rgb
 
-    def remove_asterisk_pointers(text):
-        return re.sub(r'\\*.*?\\*', '', text).strip()
+    # Stripping leftover asterisks from final string fields
+    def clean_asterisks(text):
+        return text.replace("*", "").strip()
 
-    # Fixed Paragraph Assembler applying safe word bounds to block character breakdown leaks
     def replace_text_in_paragraph(p, lookup_tuples):
         full_text = "".join(run.text for run in p.runs)
         if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
             return
             
         modified = False
-        # Sequentially inject complete units before running breakdown substrings
         for k, val in lookup_tuples:
             cleaned_key = k.strip("*").strip()
             if k.lower() in full_text.lower() or cleaned_key.lower() in full_text.lower():
@@ -501,11 +499,20 @@ def output_recreation_report(paths, data, filename):
                 modified = True
                 
         if modified:
+            full_text = clean_asterisks(full_text)
             if p.runs:
                 p.runs[0].text = full_text
                 for r in p.runs[1:]: r.text = ""
             else:
                 p.text = full_text
+        else:
+            # Enforce clean sweep on lingering brackets
+            if "*" in full_text:
+                full_text = clean_asterisks(full_text)
+                if p.runs:
+                    p.runs[0].text = full_text
+                    for r in p.runs[1:]: r.text = ""
+                else: p.text = full_text
 
     def insert_paragraph_after(paragraph, text, style=None):
         new_p = doc.add_paragraph(style=style)
@@ -522,7 +529,7 @@ def output_recreation_report(paths, data, filename):
         if 145 <= p_idx <= 165: continue
 
         if "copy from WAB, 4.1.1 Current Environment Description" in normalized_p_text or "copy from WAB, 9.1 System Description" in normalized_p_text:
-            p.text = data["system_description"]
+            p.text = clean_asterisks(data["system_description"])
         elif "insert all under brief of work assignment under category b, 1. Scope of the services, 1.1" in normalized_p_text:
             if len(data["scope_paragraphs"]) > 0:
                 p.text = data["scope_paragraphs"][0]
@@ -569,29 +576,47 @@ def output_recreation_report(paths, data, filename):
 
         if table_idx in [3, 4, 5, 6, 7]: continue
 
-        if table_idx in [0, 1]:
-            for row in table.rows:
-                for cell in row.cells: apply_border(cell, color="000000", size="12", thick=True)
+        # Google Colab Reference Mapping: Table 0 Re-construction (Sign-off)
+        if table_idx == 0:
+            try:
+                table.cell(0, 0).text = "Version 0.1"
+                table.cell(1, 0).text = "Role"; table.cell(1, 1).text = "Name"; table.cell(1, 2).text = "Action"; table.cell(1, 3).text = "Date"
+                table.cell(2, 0).text = "Created by"; table.cell(2, 1).text = f"{data['company_name']}"; table.cell(2, 2).text = "Document Revision"; table.cell(2, 3).text = "22-05-2026"
+                table.cell(3, 0).text = "Approved by"; table.cell(3, 1).text = ""; table.cell(3, 2).text = "Document Approval"; table.cell(3, 3).text = ""                 
+            except Exception: pass
 
+        # Google Colab Reference Mapping: Table 1 Re-construction (Change Control)
+        elif table_idx == 1:
+            try:
+                table.cell(0, 0).text = "Version"; table.cell(0, 1).text = "Date"; table.cell(0, 2).text = "Author"; table.cell(0, 3).text = "Summary of Changes"
+                table.cell(1, 0).text = "0.1"; table.cell(1, 1).text = "22-05-2026"; table.cell(1, 2).text = f"{data['company_name']}"; table.cell(1, 3).text = "Document Creation"
+            except Exception: pass
+
+        # Structural Risk Aggregator Styling Target Zone
         elif table_idx in [2, 10]:
             for row in table.rows:
                 lbl = row.cells[0].text.lower()
                 if "operations security" in lbl or "1.1 risks assessed" in lbl:
-                    row.cells[0].text = "Operations Security"
-                    update_cell_text_preserving_runs(row.cells[1], str(data["op_sec"]["High"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[2], str(data["op_sec"]["Medium"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[3], str(data["op_sec"]["Low"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[4], str(data["op_sec"]["AOI"]), align_center=True)
+                    update_cell_text_preserving_runs(row.cells[0], "Operations Security", font_name="Times New Roman", size_pt=10, align_center=False)
+                    update_cell_text_preserving_runs(row.cells[1], str(data["op_sec"]["High"]), font_name="Times New Roman", size_pt=10, align_center=True)
+                    update_cell_text_preserving_runs(row.cells[2], str(data["op_sec"]["Medium"]), font_name="Times New Roman", size_pt=10, align_center=True)
+                    update_cell_text_preserving_runs(row.cells[3], str(data["op_sec"]["Low"]), font_name="Times New Roman", size_pt=10, align_center=True)
+                    update_cell_text_preserving_runs(row.cells[4], str(data["op_sec"]["AOI"]), font_name="Times New Roman", size_pt=10, align_center=True)
                 elif "grand total" in lbl:
-                    row.cells[0].text = "Grand Total"
-                    update_cell_text_preserving_runs(row.cells[1], str(data["totals"]["High"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[2], str(data["totals"]["Medium"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[3], str(data["totals"]["Low"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[4], str(data["totals"]["AOI"]), align_center=True)
+                    update_cell_text_preserving_runs(row.cells[0], "Grand Total", font_name="Times New Roman", size_pt=10, align_center=False)
+                    update_cell_text_preserving_runs(row.cells[1], str(data["totals"]["High"]), font_name="Times New Roman", size_pt=10, align_center=True)
+                    update_cell_text_preserving_runs(row.cells[2], str(data["totals"]["Medium"]), font_name="Times New Roman", size_pt=10, align_center=True)
+                    update_cell_text_preserving_runs(row.cells[3], str(data["totals"]["Low"]), font_name="Times New Roman", size_pt=10, align_center=True)
+                    update_cell_text_preserving_runs(row.cells[4], str(data["totals"]["AOI"]), font_name="Times New Roman", size_pt=10, align_center=True)
             
             for r_idx, row in enumerate(table.rows):
                 for c_idx, cell in enumerate(row.cells):
                     apply_border(cell, color="4472c4", size="4", thick=False)
+                    # Force font matching rules on all remaining sub-elements
+                    for cp in cell.paragraphs:
+                        for crun in cp.runs:
+                            crun.font.name = "Times New Roman"
+                            crun.font.size = Pt(10)
 
         elif table_idx in [11, 12]:
             for row in list(table.rows):
