@@ -40,7 +40,7 @@
 
             <section class="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-xl space-y-4">
                 <h2 class="text-xl font-bold text-white mb-2">Data Source File Uploads</h2>
-                <p class="text-xs text-slate-400 mb-4">Note: The target SRA Template document is automatically pulled from your GitHub repository workspace environment.</p>
+                <p class="text-xs text-slate-400 mb-4">Note: The target SRA Template document is automatically pulled directly from your active GitHub repository file tree.</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg">
@@ -95,7 +95,6 @@
                 await pyodideModule.loadPackage(["micropip", "pandas"]);
                 
                 logToConsole("Fetching and installing pure-Python dependencies via micropip (openpyxl, python-docx)...");
-                // Run micropip internally to pull pure-python wheels directly from PyPI into browser memory
                 await pyodideModule.runPythonAsync(`
                     import micropip
                     await micropip.install('openpyxl')
@@ -146,6 +145,22 @@
                 return;
             }
 
+            // Fetch and load template dynamically from GitHub repository to resolve FS error
+            logToConsole("Pulling 'new SRA report template.docx' from GitHub repository asset layer...");
+            try {
+                const response = await fetch("new SRA report template.docx");
+                if (!response.ok) throw new Error("Template file download failed. Verify it exists in your repository root.");
+                const templateBuffer = await response.arrayBuffer();
+                const templateData = new Uint8Array(templateBuffer);
+                
+                // Clear previous and write template file to Pyodide FS
+                try { pyodideModule.FS.unlink("new SRA report template.docx"); } catch(e){}
+                pyodideModule.FS.writeFile("new SRA report template.docx", templateData);
+            } catch (err) {
+                logToConsole("FS Error Setup: " + err.message);
+                return;
+            }
+
             // Flush out previous session virtual file systems safely
             const safeUnlink = (filename) => {
                 try { pyodideModule.FS.unlink(filename); } catch(e) {}
@@ -191,7 +206,6 @@ class BrowserLogRedirect:
 sys.stdout = BrowserLogRedirect()
 sys.stderr = BrowserLogRedirect()
 
-# Verify all libraries are fully operational inside this environment thread
 try:
     import pandas as pd
     import openpyxl
@@ -208,22 +222,10 @@ sys_abbr = JS_SYSTEM_ABBREVIATION
 print(f"Executing automation pipeline for: {sys_name} ({sys_abbr})")
 
 def identify_data_sources():
-    all_repo_files = os.listdir(".")
-    target_template = None
-    for f in all_repo_files:
-        f_lower = f.lower()
-        if f_lower.endswith(".docx") and "sra" in f_lower and "template" in f_lower:
-            target_template = f
-            print(f"Auto-detected repository SRA Template: '{target_template}'")
-            break
-    if not target_template:
-        for f in all_repo_files:
-            if f.endswith(".docx") and "template" in f.lower():
-                target_template = f
-                break
+    # Hardcoded assignment for browser session file mapping
     return {
         "wab": JS_WAB_NAME,
-        "sra_template": target_template,
+        "sra_template": "new SRA report template.docx",
         "inventory": JS_INV_NAME,
         "vulnerability": JS_VUN_NAME,
         "questions": JS_Q_NAME,
