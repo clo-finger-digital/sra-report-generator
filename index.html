@@ -308,7 +308,7 @@ def process_dynamic_telemetry(paths):
                         if cleaned_txt and cleaned_txt not in scope_paragraphs:
                             scope_paragraphs.append(cleaned_txt)
 
-                if capture_obj Glen normalized_txt) > 0:
+                if capture_obj and len(normalized_txt) > 0:
                     cleaned_txt = re.sub(r'^3\\.\\d+\\s*', '', normalized_txt).strip()
                     cleaned_txt = re.sub(r'^-\\s*', '', cleaned_txt).strip()
                     if cleaned_txt and cleaned_txt not in objective_paragraphs:
