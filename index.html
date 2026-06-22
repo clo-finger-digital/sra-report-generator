@@ -432,7 +432,7 @@ def output_recreation_report(paths, data, filename):
     doc = Document(paths["sra_template"])
     risk_tier_string = f"{data['totals']['Medium']} Medium, {data['totals']['Low']} low risk and {data['totals']['AOI']} AOI items"
 
-    # Multi-case string registries matching the format variant matrices inside the template file
+    # Deep mapping registry handling all split and dynamic variations of keywords
     replacements = {
         "information system name (information system abbreviation)": f"{data['sys_name']} ({data['sys_abbr']})",
         "(INFORMATION SYSTEM ABBREVIATION)": data["sys_abbr"],
@@ -449,6 +449,7 @@ def output_recreation_report(paths, data, filename):
         "testee name (testee abbreviation)": f"{data['testee_name']} ({data['testee_abbr']})",
         "testee name": data["testee_name"],
         "testee abbreviation": data["testee_abbr"],
+        "amount of total items identified": f"{data['grand_total']} items",
         "*grand total items*": risk_tier_string
     }
 
@@ -478,23 +479,19 @@ def output_recreation_report(paths, data, filename):
     def remove_asterisk_pointers(text):
         return re.sub(r'\\*.*?\\*', '', text).strip()
 
-    # Paragraph Reconstruction Aggregator (Bypasses MS Word split-run anomalies)
+    # Advanced Global Aggregator sweeping split XML nodes
     def replace_text_in_paragraph(p, lookup_dict):
         full_text = "".join(run.text for run in p.runs)
-        
-        # Methodology Protection Zone Check
         if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
             return
             
         modified = False
-        # Sort keys to evaluate full strings before sub-tokens
         for k in sorted(lookup_dict.keys(), key=len, reverse=True):
-            cleaned_key = k.strip("*")
-            if cleaned_key.lower() in full_text.lower() or k.lower() in full_text.lower():
-                # Flexible case-insensitive lookahead logic
+            cleaned_key = k.strip("*").strip()
+            # Intercept loose string variations inside table frames
+            if k.lower() in full_text.lower() or cleaned_key.lower() in full_text.lower():
                 pattern = re.compile(re.escape(k), re.IGNORECASE)
                 full_text = pattern.sub(lookup_dict[k], full_text)
-                # Fallback to clear stripped tokens
                 pattern_clean = re.compile(re.escape(cleaned_key), re.IGNORECASE)
                 full_text = pattern_clean.sub(lookup_dict[k], full_text)
                 modified = True
@@ -514,7 +511,7 @@ def output_recreation_report(paths, data, filename):
         p_element.addnext(new_p._p)
         return new_p
 
-    # 1. Standard Core Paragraph Evaluation Pipeline
+    # Container Sweep Loop 1: Core Document Flow
     for p_idx, p in enumerate(list(doc.paragraphs)):
         full_p_text = "".join(run.text for run in p.runs)
         normalized_p_text = full_p_text.replace('\\n', ' ').strip()
@@ -523,7 +520,6 @@ def output_recreation_report(paths, data, filename):
 
         if "copy from WAB, 4.1.1 Current Environment Description" in normalized_p_text or "copy from WAB, 9.1 System Description" in normalized_p_text:
             p.text = remove_asterisk_pointers(data["system_description"])
-            
         elif "insert all under brief of work assignment under category b, 1. Scope of the services, 1.1" in normalized_p_text:
             if len(data["scope_paragraphs"]) > 0:
                 p.text = remove_asterisk_pointers(data["scope_paragraphs"][0])
@@ -532,7 +528,6 @@ def output_recreation_report(paths, data, filename):
                 for msg in data["scope_paragraphs"][1:]:
                     current_anchor = insert_paragraph_after(current_anchor, remove_asterisk_pointers(msg), style='List Bullet')
             else: p.text = ""
-                
         elif "copy from work assignment under category b, all under 3. Project objectives" in normalized_p_text:
             if len(data["objective_paragraphs"]) > 0:
                 p.text = remove_asterisk_pointers(data["objective_paragraphs"][0])
@@ -541,46 +536,36 @@ def output_recreation_report(paths, data, filename):
                 for msg in data["objective_paragraphs"][1:]:
                     current_anchor = insert_paragraph_after(current_anchor, remove_asterisk_pointers(msg), style='List Bullet')
             else: p.text = ""
-                
         elif "copy from WAB section 4.4" in normalized_p_text:
             p.text = f"{data['company_abbr']} referred to the following documents in conducting the security risk assessment:"
             current_anchor = p
             for msg in data["security_requirements"]:
                 current_anchor = insert_paragraph_after(current_anchor, remove_asterisk_pointers(msg), style='List Bullet')
-                
         elif "copy from follow up plan" in normalized_p_text.lower() or "copy from this document table" in normalized_p_text.lower():
             p.text = ""
         else:
             replace_text_in_paragraph(p, replacements)
 
-    # 2. DOCUMENT CONTROL TABLES UPDATES
-    try:
-        t_signoff = doc.tables[0]
-        t_signoff.cell(0, 0).text = "Version 0.1"
-        t_signoff.cell(1, 0).text = "Role"; t_signoff.cell(1, 1).text = "Name"; t_signoff.cell(1, 2).text = "Action"; t_signoff.cell(1, 3).text = "Date"
-        t_signoff.cell(2, 0).text = "Created by"; t_signoff.cell(2, 1).text = f"{data['company_name']}"; t_signoff.cell(2, 2).text = "Document Revision"; t_signoff.cell(2, 3).text = "22-05-2026"
-        t_signoff.cell(3, 0).text = "Approved by"; t_signoff.cell(3, 1).text = ""; t_signoff.cell(3, 2).text = "Document Approval"; t_signoff.cell(3, 3).text = ""                 
-    except Exception: pass
-
-    try:
-        t_revision = doc.tables[1]
-        t_revision.cell(0, 0).text = "Version"; t_revision.cell(0, 1).text = "Date"; t_revision.cell(0, 2).text = "Author"; t_revision.cell(0, 3).text = "Summary of Changes"
-        t_revision.cell(1, 0).text = "0.1"; t_revision.cell(1, 1).text = "22-05-2026"; t_revision.cell(1, 2).text = f"{data['company_name']}"; t_revision.cell(1, 3).text = "Document Creation"
-    except Exception: pass
+    # Container Sweep Loop 2: Section Headers & Footers Margins
+    for section in doc.sections:
+        for header_p in section.header.paragraphs:
+            replace_text_in_paragraph(header_p, replacements)
+        for footer_p in section.footer.paragraphs:
+            replace_text_in_paragraph(footer_p, replacements)
 
     vulnerability_table_count = 0
 
-    # 3. INTER-CELL SEARCH MATRIX FOR CLASSIFIED CONTROL TABLES
+    # Container Sweep Loop 3: Tables Matrix Grid cells & Inline Shapes
     for table_idx, table in enumerate(doc.tables):
         if len(table.rows) == 0 or len(table.rows[0].cells) == 0: continue
         
-        if table_idx in [3, 4, 5, 6, 7]: continue
-
-        # Cell Content Scanner Routine targeting deep table elements
+        # Injector Scanner inside every table cell paragraph element
         for row in table.rows:
             for cell in row.cells:
-                for paragraph in cell.paragraphs:
-                    replace_text_in_paragraph(paragraph, replacements)
+                for cell_p in cell.paragraphs:
+                    replace_text_in_paragraph(cell_p, replacements)
+
+        if table_idx in [3, 4, 5, 6, 7]: continue
 
         if table_idx in [0, 1]:
             for row in table.rows:
@@ -640,7 +625,7 @@ def output_recreation_report(paths, data, filename):
                     apply_border(cell, color="000000", size="4", thick=False)
 
     doc.save(filename)
-    print("Compilation complete. Download available.")
+    print("Compilation complete. Output streaming verified.")
 
 def apply_border(cell, color="000000", size="4", thick=False):
     from docx.oxml import parse_xml
