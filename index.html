@@ -29,7 +29,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Information System Name</label>
-                        <input type="text" id="system_name" value="Special Education Management Information System" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                        <input text="text" id="system_name" value="Special Education Management Information System" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Information System Abbreviation</label>
@@ -233,8 +233,8 @@ sys_abbr = JS_SYSTEM_ABBREVIATION
 testee_name = JS_TESTEE_NAME
 testee_abbr = JS_TESTEE_ABBREVIATION
 
-# Dynamic production date formatting override: 22 June 2026 / 22-06-2026
-current_date_text = "22 June 2026"
+# Consolidated Production Date Constants
+current_date_text = "June 2026"
 current_date_numeric = "22-06-2026"
 
 print(f"Executing automation pipeline for: {sys_name} ({sys_abbr})")
@@ -490,9 +490,9 @@ def output_recreation_report(paths, data, filename):
     def replace_text_in_paragraph(p, lookup_tuples):
         full_text = "".join(run.text for run in p.runs)
         
-        # Enhanced paragraph blocker to EXCLUDE "Review and interview sessions" from the blocked zone
+        # Explicitly ignore blocker rule if "review and interview sessions" is targeted
         if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
-            if "review and interview sessions" not in full_text.lower():
+            if "review and interview" not in full_text.lower():
                 return
             
         modified = False
