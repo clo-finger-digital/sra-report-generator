@@ -29,7 +29,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Information System Name</label>
-                        <input text="text" id="system_name" value="Special Education Management Information System" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                        <input type="text" id="system_name" value="Special Education Management Information System" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Information System Abbreviation</label>
@@ -48,31 +48,31 @@
 
             <section class="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-xl space-y-4">
                 <h2 class="text-xl font-bold text-white mb-2">Data Source File Uploads</h2>
-                <p class="text-xs text-slate-400 mb-4">Note: The SRA Template document is automatically pulled directly from your active GitHub repository file tree.</p>
+                <p class="text-xs text-slate-400 mb-4">Note: Only WAB Brief and Vulnerability Follow-up Plan are required to execute compilation.</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg">
-                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">1. WAB Brief Document (.docx)</label>
-                        <input type="file" id="file_wab" accept=".docx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
+                    <div class="p-4 bg-slate-950 border border-dashed border-blue-500/50 rounded-lg">
+                        <label class="block text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">1. WAB Brief Document (.docx) *Required</label>
+                        <input type="file" id="file_wab" accept=".docx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-900/50 file:text-blue-200 hover:file:bg-blue-800 cursor-pointer">
                     </div>
 
-                    <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg">
-                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">2. Asset Inventory (.xlsx)</label>
+                    <div class="p-4 bg-slate-950 border border-dashed border-blue-500/50 rounded-lg">
+                        <label class="block text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">2. Vulnerability & Pentest Follow-up Plan (.xlsx) *Required</label>
+                        <input type="file" id="file_vulnerability" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-900/50 file:text-blue-200 hover:file:bg-blue-800 cursor-pointer">
+                    </div>
+
+                    <div class="p-4 bg-slate-950 border border-dashed border-slate-800 rounded-lg opacity-60 hover:opacity-100 transition">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">3. Asset Inventory (.xlsx) [Optional]</label>
                         <input type="file" id="file_inventory" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
                     </div>
 
-                    <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg">
-                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">3. Vulnerability & Pentest Plan (.xlsx)</label>
-                        <input type="file" id="file_vulnerability" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
-                    </div>
-
-                    <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg">
-                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">4. Code Review Follow-up Plan (.xlsx)</label>
+                    <div class="p-4 bg-slate-950 border border-dashed border-slate-800 rounded-lg opacity-60 hover:opacity-100 transition">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">4. Code Review Follow-up Plan (.xlsx) [Optional]</label>
                         <input type="file" id="file_codereview" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
                     </div>
 
-                    <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg md:col-span-2">
-                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">5. SRA Assessment Control Questions (.xlsx)</label>
+                    <div class="p-4 bg-slate-950 border border-dashed border-slate-800 rounded-lg md:col-span-2 opacity-60 hover:opacity-100 transition">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">5. SRA Assessment Control Questions (.xlsx) [Optional]</label>
                         <input type="file" id="file_questions" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
                     </div>
                 </div>
@@ -150,23 +150,23 @@
             const codeReviewFile = await getFileBytes("file_codereview");
             const questionsFile = await getFileBytes("file_questions");
 
-            if (!wabFile) {
-                logToConsole("Aborted: WAB verification brief file must be uploaded before compilation.");
+            if (!wabFile || !vulnerabilityFile) {
+                logToConsole("Aborted: WAB Brief and Vulnerability Follow-up Plan are required to run compilation.");
+                alert("Please upload both the WAB Document and Vulnerability Follow-up Plan.");
                 return;
             }
 
-            logToConsole("Pulling 'new SRA report template.docx' via relative URL request network hook...");
+            logToConsole("Pulling template document via relative repo tree check...");
             try {
                 const response = await fetch("./new%20SRA%20report%20template.docx");
-                if (!response.ok) throw new Error("Network response error: Code 404. Make sure 'new SRA report template.docx' is in the root repository path.");
+                if (!response.ok) throw new Error("Template access error 404.");
                 const templateBuffer = await response.arrayBuffer();
                 const templateData = new Uint8Array(templateBuffer);
                 
                 try { pyodideModule.FS.unlink("new_sra_template.docx"); } catch(e){}
                 pyodideModule.FS.writeFile("new_sra_template.docx", templateData);
-                logToConsole("Successfully mounted repository template document to Virtual File System.");
             } catch (err) {
-                logToConsole("FS Error Setup: " + err.message);
+                logToConsole("FS Error: Template missing from root folder path.");
                 return;
             }
 
@@ -176,18 +176,16 @@
             };
             
             safeUnlink(wabFile.name);
+            safeUnlink(vulnerabilityFile.name);
             if (inventoryFile) safeUnlink(inventoryFile.name);
-            if (vulnerabilityFile) safeUnlink(vulnerabilityFile.name);
             if (codeReviewFile) safeUnlink(codeReviewFile.name);
             if (questionsFile) safeUnlink(questionsFile.name);
 
             pyodideModule.FS.writeFile(wabFile.name, wabFile.data);
+            pyodideModule.FS.writeFile(vulnerabilityFile.name, vulnerabilityFile.data);
             if (inventoryFile) pyodideModule.FS.writeFile(inventoryFile.name, inventoryFile.data);
-            if (vulnerabilityFile) pyodideModule.FS.writeFile(vulnerabilityFile.name, vulnerabilityFile.data);
             if (codeReviewFile) pyodideModule.FS.writeFile(codeReviewFile.name, codeReviewFile.data);
             if (questionsFile) pyodideModule.FS.writeFile(questionsFile.name, questionsFile.data);
-
-            logToConsole("Injected source targets into the Pyodide WebAssessment file layer...");
 
             pyodideModule.globals.set("JS_COMPANY_NAME", cName);
             pyodideModule.globals.set("JS_COMPANY_ABBREVIATION", cAbbr);
@@ -196,8 +194,8 @@
             pyodideModule.globals.set("JS_TESTEE_NAME", tName);
             pyodideModule.globals.set("JS_TESTEE_ABBREVIATION", tAbbr);
             pyodideModule.globals.set("JS_WAB_NAME", wabFile.name);
+            pyodideModule.globals.set("JS_VUN_NAME", vulnerabilityFile.name);
             pyodideModule.globals.set("JS_INV_NAME", inventoryFile ? inventoryFile.name : null);
-            pyodideModule.globals.set("JS_VUN_NAME", vulnerabilityFile ? vulnerabilityFile.name : null);
             pyodideModule.globals.set("JS_CR_NAME", codeReviewFile ? codeReviewFile.name : null);
             pyodideModule.globals.set("JS_Q_NAME", questionsFile ? questionsFile.name : null);
 
@@ -222,9 +220,9 @@ try:
     from docx import Document
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Pt, RGBColor
-    print("Python Runtime: Engine operational.")
+    print("Python Runtime: Sandbox environment bound and functional.")
 except ImportError as e:
-    print(f"Runtime Warning: Critical library component missing - {str(e)}")
+    print(f"Runtime Warning: Component missing - {str(e)}")
 
 company_name = JS_COMPANY_NAME
 company_abbr = JS_COMPANY_ABBREVIATION
@@ -233,11 +231,8 @@ sys_abbr = JS_SYSTEM_ABBREVIATION
 testee_name = JS_TESTEE_NAME
 testee_abbr = JS_TESTEE_ABBREVIATION
 
-# Consolidated Production Date Constants
 current_date_text = "June 2026"
 current_date_numeric = "22-06-2026"
-
-print(f"Executing automation pipeline for: {sys_name} ({sys_abbr})")
 
 def identify_data_sources():
     return {
@@ -251,6 +246,7 @@ def identify_data_sources():
 
 def process_dynamic_telemetry(paths):
     def read_and_align_sheet(file_path, landmarks, sheet_idx=0):
+        if not file_path: return pd.DataFrame()
         try:
             df_raw = pd.read_excel(file_path, header=None, sheet_name=sheet_idx)
             header_row_idx = None
@@ -261,7 +257,6 @@ def process_dynamic_telemetry(paths):
                     break
             if header_row_idx is None: header_row_idx = 0 
             df_aligned = pd.read_excel(file_path, skiprows=header_row_idx, sheet_name=sheet_idx)
-            
             if not df_aligned.empty:
                 df_aligned.columns = [str(c).strip() for c in df_aligned.columns]
                 return df_aligned
@@ -339,8 +334,7 @@ def process_dynamic_telemetry(paths):
                         if ilvl is not None and ilvl.get(f'{{{W_NAMESPACE}}}val') == "0":
                             if normalized_txt not in security_requirements:
                                 security_requirements.append(normalized_txt)
-        except Exception as e:
-            print(f"Parser validation notice: {str(e)}")
+        except Exception: pass
 
     if not system_description_text:
         system_description_text = "System to support processing criteria frameworks."
@@ -389,6 +383,7 @@ def process_dynamic_telemetry(paths):
 
     cr_counts = {"High": 0, "Medium": 0, "Low": 0, "AOI": 0}
     for f in paths["code_reviews"]:
+        if not f: continue
         try:
             xl_file = pd.ExcelFile(f)
             for sheet in xl_file.sheet_names:
@@ -490,7 +485,6 @@ def output_recreation_report(paths, data, filename):
     def replace_text_in_paragraph(p, lookup_tuples):
         full_text = "".join(run.text for run in p.runs)
         
-        # Explicitly ignore blocker rule if "review and interview sessions" is targeted
         if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
             if "review and interview" not in full_text.lower():
                 return
