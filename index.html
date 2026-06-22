@@ -91,9 +91,16 @@
                 logToConsole("Loading Pyodide Core Engine...");
                 pyodideModule = await loadPyodide();
                 
-                logToConsole("Fetching and installing dependency packages (pandas, openpyxl)...");
-                // Explicitly loading packages directly into the initialization layer
-                await pyodideModule.loadPackage(["pandas", "openpyxl"]);
+                logToConsole("Loading core package manager (micropip)...");
+                // loadPackage allows us to boot up micropip to fetch pure-python wheels from PyPI
+                await pyodideModule.loadPackage(["micropip", "pandas"]);
+                
+                logToConsole("Fetching and installing 'openpyxl' via micropip...");
+                // Run micropip internally to pull openpyxl into the virtual environment
+                await pyodideModule.runPythonAsync(`
+                    import micropip
+                    await micropip.install('openpyxl')
+                `);
                 
                 logToConsole("Environment Ready. System dependencies successfully loaded.");
             } catch (err) {
@@ -184,12 +191,13 @@ class BrowserLogRedirect:
 sys.stdout = BrowserLogRedirect()
 sys.stderr = BrowserLogRedirect()
 
-# Execute pandas lazy-loading validation loop right inside python environment
+# Verify libraries are fully active inside this process thread
 try:
     import pandas as pd
-    print("Python Runtime: library 'pandas' verified and operational.")
-except ImportError:
-    print("Library error: 'pandas' module not found inside Python sub-layer.")
+    import openpyxl
+    print("Python Runtime: 'pandas' and 'openpyxl' modules verified and operational.")
+except ImportError as e:
+    print(f"Runtime Warning: Library component missing - {str(e)}")
 
 company_name = JS_COMPANY_NAME
 company_abbr = JS_COMPANY_ABBREVIATION
@@ -300,7 +308,7 @@ def process_dynamic_telemetry(paths):
                         if cleaned_txt and cleaned_txt not in scope_paragraphs:
                             scope_paragraphs.append(cleaned_txt)
 
-                if capture_obj and len(normalized_txt) > 0:
+                if capture_obj Glen normalized_txt) > 0:
                     cleaned_txt = re.sub(r'^3\\.\\d+\\s*', '', normalized_txt).strip()
                     cleaned_txt = re.sub(r'^-\\s*', '', cleaned_txt).strip()
                     if cleaned_txt and cleaned_txt not in objective_paragraphs:
