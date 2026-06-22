@@ -87,15 +87,23 @@
         let pyodideModule = null;
 
         async function initPyodide() {
-            logToConsole("Loading inline browser environment...");
-            pyodideModule = await loadPyodide();
-            await pyodideModule.loadPackage(["pandas", "openpyxl"]);
-            logToConsole("Environment Ready. System dependencies successfully loaded.");
+            try {
+                logToConsole("Loading Pyodide Core Engine...");
+                pyodideModule = await loadPyodide();
+                
+                logToConsole("Fetching and installing dependency packages (pandas, openpyxl)...");
+                // Explicitly loading packages directly into the initialization layer
+                await pyodideModule.loadPackage(["pandas", "openpyxl"]);
+                
+                logToConsole("Environment Ready. System dependencies successfully loaded.");
+            } catch (err) {
+                logToConsole("Initialization Error: " + err.message);
+            }
         }
         initPyodide();
 
         function logToConsole(message) {
-            if (!message.trim()) return;
+            if (!message || !message.trim()) return;
             const out = document.getElementById("console_output");
             out.textContent += "\n" + message;
             out.scrollTop = out.scrollHeight;
@@ -110,7 +118,10 @@
         }
 
         async function executePythonPipeline() {
-            if (!pyodideModule) return alert("System runtime is still initializing. Please wait.");
+            if (!pyodideModule) {
+                alert("System runtime is still initializing. Please wait.");
+                return;
+            }
             
             const cName = document.getElementById("company_name").value;
             const cAbbr = document.getElementById("company_abbr").value;
@@ -124,18 +135,22 @@
             const questionsFile = await getFileBytes("file_questions");
 
             if (!wabFile) {
-                logToConsole("Aborted: WAB Brief file must be uploaded before compilation can occur.");
+                logToConsole("Aborted: WAB verification brief file must be uploaded before compilation.");
                 return;
             }
 
-            // Clean previous session virtual files
-            try { pyodideModule.FS.unlink(wabFile.name); } catch(e){}
-            if (inventoryFile) { try { pyodideModule.FS.unlink(inventoryFile.name); } catch(e){} }
-            if (vulnerabilityFile) { try { pyodideModule.FS.unlink(vulnerabilityFile.name); } catch(e){} }
-            if (codeReviewFile) { try { pyodideModule.FS.unlink(codeReviewFile.name); } catch(e){} }
-            if (questionsFile) { try { pyodideModule.FS.unlink(questionsFile.name); } catch(e){} }
+            // Flush out previous session virtual file systems safely
+            const safeUnlink = (filename) => {
+                try { pyodideModule.FS.unlink(filename); } catch(e) {}
+            };
+            
+            safeUnlink(wabFile.name);
+            if (inventoryFile) safeUnlink(inventoryFile.name);
+            if (vulnerabilityFile) safeUnlink(vulnerabilityFile.name);
+            if (codeReviewFile) safeUnlink(codeReviewFile.name);
+            if (questionsFile) safeUnlink(questionsFile.name);
 
-            // Write File Streams into Pyodide Virtual File System (FS)
+            // Remount fresh active session file bytes
             pyodideModule.FS.writeFile(wabFile.name, wabFile.data);
             if (inventoryFile) pyodideModule.FS.writeFile(inventoryFile.name, inventoryFile.data);
             if (vulnerabilityFile) pyodideModule.FS.writeFile(vulnerabilityFile.name, vulnerabilityFile.data);
@@ -158,16 +173,23 @@
 import os
 import sys
 import re
-import pandas as pd
 
+# Redirection framework routing standard stdout straight out to browser viewport logs
 class BrowserLogRedirect:
     def write(self, s):
         import js
-        js.logToConsole(s)
+        js.logToConsole(str(s))
     def flush(self): pass
 
 sys.stdout = BrowserLogRedirect()
 sys.stderr = BrowserLogRedirect()
+
+# Execute pandas lazy-loading validation loop right inside python environment
+try:
+    import pandas as pd
+    print("Python Runtime: library 'pandas' verified and operational.")
+except ImportError:
+    print("Library error: 'pandas' module not found inside Python sub-layer.")
 
 company_name = JS_COMPANY_NAME
 company_abbr = JS_COMPANY_ABBREVIATION
@@ -580,7 +602,6 @@ def output_recreation_report(paths, data, filename):
                         format_cell_text(cell, font_name="Times New Roman", size_pt=9, align_center=center_flag)
 
         else:
-            # Reconstruct Asset Identification Grid dynamically if index matches
             if "role description" in table.rows[0].cells[1].text.lower() and len(data["asset_rows"]) > 0:
                 table.cell(0, 0).text = "Item"; table.cell(0, 1).text = "Asset Description"; table.cell(0, 2).text = "Hostname / ID"; table.cell(0, 3).text = "IP Address / URL"; table.cell(0, 4).text = "OS Version"
                 for asset_row in data["asset_rows"]:
@@ -593,7 +614,7 @@ def output_recreation_report(paths, data, filename):
                     cell.text = remove_asterisk_pointers(cell.text)
 
     doc.save(filename)
-    print("Compilation finished cleanly.")
+    print("Compilation complete.")
 
 def apply_border(cell, color="000000", size="4", thick=False):
     from docx.oxml import parse_xml
