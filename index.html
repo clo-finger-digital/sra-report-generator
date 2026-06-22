@@ -145,7 +145,6 @@
                 return;
             }
 
-            // URL-encoded fetch string targets to handle spaces inside static filenames natively
             logToConsole("Pulling 'new SRA report template.docx' via relative URL request network hook...");
             try {
                 const response = await fetch("./new%20SRA%20report%20template.docx");
@@ -207,7 +206,10 @@ try:
     import pandas as pd
     import openpyxl
     from docx import Document
-    print("Python Runtime: All core third-party analytical modules successfully bound.")
+    # Explicitly import alignment and styling dependencies to eliminate NameErrors
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt, RGBColor
+    print("Python Runtime: All core third-party analytical modules and enum constraints successfully bound.")
 except ImportError as e:
     print(f"Runtime Warning: Critical library component missing - {str(e)}")
 
@@ -219,7 +221,6 @@ sys_abbr = JS_SYSTEM_ABBREVIATION
 print(f"Executing automation pipeline for: {sys_name} ({sys_abbr})")
 
 def identify_data_sources():
-    # Force alignment to the explicitly verified virtual filename layout mounted by JS
     return {
         "wab": JS_WAB_NAME,
         "sra_template": "new_sra_template.docx",
