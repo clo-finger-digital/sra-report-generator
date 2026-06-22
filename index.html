@@ -273,7 +273,7 @@ def process_dynamic_telemetry(paths):
     if paths["wab"]:
         try:
             wab_doc = Document(paths["wab"])
-            capture_scope, capture_obj, capture_desc, capture_req = False, False, False
+            capture_scope, capture_obj, capture_desc, capture_req = False, False, False, False
             for p in wab_doc.paragraphs:
                 txt = "".join(run.text for run in p.runs).strip()
                 normalized_txt = txt.replace('\\xa0', ' ').strip()
@@ -454,7 +454,7 @@ def output_recreation_report(paths, data, filename):
         ("*grand total items*", risk_tier_string)
     ]
 
-    # Stateful dictionary tracking execution flow across nested functions
+    # Stateful dict tracking wrapper used to safely survive Pyodide run contexts
     parse_state = {"allow_edits": False}
 
     def update_cell_text_preserving_runs(cell, new_text, font_name="Times New Roman", size_pt=10, align_center=False):
@@ -486,11 +486,11 @@ def output_recreation_report(paths, data, filename):
     def replace_text_in_paragraph(p, lookup_tuples):
         full_text = "".join(run.text for run in p.runs)
         
-        # Unlock editing permissions as soon as Table 3 anchor line is passed
+        # Safe anchor unlock switch mapping
         if "tier 3 information system risk ranking matrix" in full_text.lower():
             parse_state["allow_edits"] = True
 
-        # Directly handle lines split by MS Word run anomalies
+        # Target line-break split wrapper execution block
         lower_full = full_text.lower().replace(" ", "").replace("\\n", "")
         if "reviewandinterview" in lower_full and "checklists" in lower_full:
             full_text = f"Review and interview sessions to check the security compliance of information systems of {testee_abbr} using security checklists were conducted by {company_abbr}. The following security domains were covered in the security review:"
@@ -501,7 +501,7 @@ def output_recreation_report(paths, data, filename):
                 p.text = full_text
             return
 
-        # Locked boilerplate restriction filter rule
+        # Core Methodology lockdown ruleset filter
         if not parse_state["allow_edits"]:
             if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
                 return
@@ -536,7 +536,7 @@ def output_recreation_report(paths, data, filename):
         full_p_text = "".join(run.text for run in p.runs)
         normalized_p_text = full_p_text.replace('\\n', ' ').strip()
         
-        # Format cover page dates to only show month and year
+        # Precise absolute pointer for front title page date overlay calculation
         if p_idx < 15 and ("may 2026" in normalized_p_text.lower() or "june 2026" in normalized_p_text.lower()):
             p.text = current_date_text
             for run in p.runs:
@@ -594,7 +594,7 @@ def output_recreation_report(paths, data, filename):
 
         if table_idx in [3, 4, 5, 6, 7]: continue
 
-        # Sign-off Table (Table 0) Mapping
+        # Dynamic Sign-Off Table Sync (Table 0)
         if table_idx == 0:
             try:
                 table.cell(0, 0).text = "Version 0.1"
@@ -603,14 +603,14 @@ def output_recreation_report(paths, data, filename):
                 table.cell(3, 0).text = "Approved by"; table.cell(3, 1).text = ""; table.cell(3, 2).text = "Document Approval"; table.cell(3, 3).text = ""                 
             except Exception: pass
 
-        # Change Control Table (Table 1) Mapping
+        # Dynamic Change Control Table Sync (Table 1)
         elif table_idx == 1:
             try:
                 table.cell(0, 0).text = "Version"; table.cell(0, 1).text = "Date"; table.cell(0, 2).text = "Author"; table.cell(0, 3).text = "Summary of Changes"
                 table.cell(1, 0).text = "0.1"; table.cell(1, 1).text = current_date_numeric; table.cell(1, 2).text = f"{data['company_name']}"; table.cell(1, 3).text = "Document Creation"
             except Exception: pass
 
-        # Risk Executive Matrix Mapping & Typography Styling
+        # Structural Risk Aggregator Styling Target Zone
         elif table_idx in [2, 10]:
             for row in table.rows:
                 lbl = row.cells[0].text.lower()
