@@ -454,9 +454,6 @@ def output_recreation_report(paths, data, filename):
         ("*grand total items*", risk_tier_string)
     ]
 
-    # Stateful dict tracking wrapper used to safely survive Pyodide run contexts
-    parse_state = {"allow_edits": False}
-
     def update_cell_text_preserving_runs(cell, new_text, font_name="Times New Roman", size_pt=10, align_center=False):
         if len(cell.paragraphs) == 0: cell.add_paragraph()
         p = cell.paragraphs[0]
@@ -483,15 +480,12 @@ def output_recreation_report(paths, data, filename):
     def remove_asterisks_entirely(text):
         return text.replace("*", "").strip()
 
-    def replace_text_in_paragraph(p, lookup_tuples):
+    # Pass structural markers directly through inline conditional sweeps 
+    def replace_text_in_paragraph(p, lookup_tuples, current_index):
         full_text = "".join(run.text for run in p.runs)
-        
-        # Safe anchor unlock switch mapping
-        if "tier 3 information system risk ranking matrix" in full_text.lower():
-            parse_state["allow_edits"] = True
-
-        # Target line-break split wrapper execution block
         lower_full = full_text.lower().replace(" ", "").replace("\\n", "")
+        
+        # Immediate High-Priority Interception Rule: Force-inject into split line-wraps
         if "reviewandinterview" in lower_full and "checklists" in lower_full:
             full_text = f"Review and interview sessions to check the security compliance of information systems of {testee_abbr} using security checklists were conducted by {company_abbr}. The following security domains were covered in the security review:"
             if p.runs:
@@ -501,8 +495,8 @@ def output_recreation_report(paths, data, filename):
                 p.text = full_text
             return
 
-        # Core Methodology lockdown ruleset filter
-        if not parse_state["allow_edits"]:
+        # Core section methodology exclusion filter gate: Open permissions post Table 3 line layout bounds
+        if current_index < 125:
             if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
                 return
 
@@ -536,7 +530,7 @@ def output_recreation_report(paths, data, filename):
         full_p_text = "".join(run.text for run in p.runs)
         normalized_p_text = full_p_text.replace('\\n', ' ').strip()
         
-        # Precise absolute pointer for front title page date overlay calculation
+        # Enforce target Month and Year layout overlay
         if p_idx < 15 and ("may 2026" in normalized_p_text.lower() or "june 2026" in normalized_p_text.lower()):
             p.text = current_date_text
             for run in p.runs:
@@ -572,14 +566,14 @@ def output_recreation_report(paths, data, filename):
         elif "copy from follow up plan" in normalized_p_text.lower() or "copy from this document table" in normalized_p_text.lower():
             p.text = ""
         else:
-            replace_text_in_paragraph(p, replacements)
+            replace_text_in_paragraph(p, replacements, p_idx)
 
     # Container Sweep Loop 2: Section Margin Headers & Footers
     for section in doc.sections:
         for header_p in section.header.paragraphs:
-            replace_text_in_paragraph(header_p, replacements)
+            replace_text_in_paragraph(header_p, replacements, 999)
         for footer_p in section.footer.paragraphs:
-            replace_text_in_paragraph(footer_p, replacements)
+            replace_text_in_paragraph(footer_p, replacements, 999)
 
     vulnerability_table_count = 0
 
@@ -590,7 +584,7 @@ def output_recreation_report(paths, data, filename):
         for row in table.rows:
             for cell in row.cells:
                 for cell_p in cell.paragraphs:
-                    replace_text_in_paragraph(cell_p, replacements)
+                    replace_text_in_paragraph(cell_p, replacements, 999)
 
         if table_idx in [3, 4, 5, 6, 7]: continue
 
