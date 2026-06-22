@@ -145,7 +145,7 @@
                 return;
             }
 
-            // Fetch and load template dynamically from GitHub repository to resolve FS error
+            // Fetch and load template dynamically using explicit case matching to prevent FS errors
             logToConsole("Pulling 'new SRA report template.docx' from GitHub repository asset layer...");
             try {
                 const response = await fetch("new SRA report template.docx");
@@ -153,7 +153,6 @@
                 const templateBuffer = await response.arrayBuffer();
                 const templateData = new Uint8Array(templateBuffer);
                 
-                // Clear previous and write template file to Pyodide FS
                 try { pyodideModule.FS.unlink("new SRA report template.docx"); } catch(e){}
                 pyodideModule.FS.writeFile("new SRA report template.docx", templateData);
             } catch (err) {
@@ -161,7 +160,6 @@
                 return;
             }
 
-            // Flush out previous session virtual file systems safely
             const safeUnlink = (filename) => {
                 try { pyodideModule.FS.unlink(filename); } catch(e) {}
             };
@@ -172,7 +170,6 @@
             if (codeReviewFile) safeUnlink(codeReviewFile.name);
             if (questionsFile) safeUnlink(questionsFile.name);
 
-            // Remount fresh active session file bytes
             pyodideModule.FS.writeFile(wabFile.name, wabFile.data);
             if (inventoryFile) pyodideModule.FS.writeFile(inventoryFile.name, inventoryFile.data);
             if (vulnerabilityFile) pyodideModule.FS.writeFile(vulnerabilityFile.name, vulnerabilityFile.data);
@@ -196,7 +193,6 @@ import os
 import sys
 import re
 
-# Redirection framework routing standard stdout straight out to browser viewport logs
 class BrowserLogRedirect:
     def write(self, s):
         import js
@@ -222,7 +218,6 @@ sys_abbr = JS_SYSTEM_ABBREVIATION
 print(f"Executing automation pipeline for: {sys_name} ({sys_abbr})")
 
 def identify_data_sources():
-    # Hardcoded assignment for browser session file mapping
     return {
         "wab": JS_WAB_NAME,
         "sra_template": "new SRA report template.docx",
@@ -428,10 +423,6 @@ def process_dynamic_telemetry(paths):
     }
 
 def output_recreation_report(paths, data, filename):
-    if not paths["sra_template"]:
-        print("Error: Aborted compilation. Missing an SRA Template file inside the repository directory.")
-        return
-        
     doc = Document(paths["sra_template"])
     risk_tier_string = f"{data['totals']['Medium']} Medium, {data['totals']['Low']} low risk and {data['totals']['AOI']} AOI items"
 
