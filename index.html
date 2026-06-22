@@ -220,7 +220,7 @@ try:
     from docx import Document
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Pt, RGBColor
-    print("Python Runtime: Sandbox environment bound and functional.")
+    print("Python Runtime: Engine operational.")
 except ImportError as e:
     print(f"Runtime Warning: Component missing - {str(e)}")
 
@@ -451,8 +451,6 @@ def output_recreation_report(paths, data, filename):
         ("testee name (testee abbreviation)", f"{data['testee_name']} ({data['testee_abbr']})"),
         ("testee abbreviation", data["testee_abbr"]),
         ("testee name", data["testee_name"]),
-        ("May 2026", current_date_text),
-        ("June 2026", current_date_text),
         ("*grand total items*", risk_tier_string)
     ]
 
@@ -485,19 +483,26 @@ def output_recreation_report(paths, data, filename):
     def replace_text_in_paragraph(p, lookup_tuples):
         full_text = "".join(run.text for run in p.runs)
         
+        # Methodology compliance block bypass check
         if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
             if "review and interview" not in full_text.lower():
                 return
-            
-        modified = False
-        for k, val in lookup_tuples:
-            cleaned_key = k.strip("*").strip()
-            if k.lower() in full_text.lower() or cleaned_key.lower() in full_text.lower():
-                pattern = re.compile(re.escape(k), re.IGNORECASE)
-                full_text = pattern.sub(val, full_text)
-                pattern_clean = re.compile(re.escape(cleaned_key), re.IGNORECASE)
-                full_text = pattern_clean.sub(val, full_text)
-                modified = True
+
+        # Direct explicit interception loop for split-run formatting chunks
+        if "review and interview sessions" in full_text.lower() or "checklists were conducted by" in full_text.lower():
+            full_text = full_text.replace("*testee abbreviation*", testee_abbr).replace("testee abbreviation", testee_abbr)
+            full_text = full_text.replace("*COMPANY ABBREVIATION*", company_abbr).replace("COMPANY ABBREVIATION", company_abbr)
+            modified = True
+        else:
+            modified = False
+            for k, val in lookup_tuples:
+                cleaned_key = k.strip("*").strip()
+                if k.lower() in full_text.lower() or cleaned_key.lower() in full_text.lower():
+                    pattern = re.compile(re.escape(k), re.IGNORECASE)
+                    full_text = pattern.sub(val, full_text)
+                    pattern_clean = re.compile(re.escape(cleaned_key), re.IGNORECASE)
+                    full_text = pattern_clean.sub(val, full_text)
+                    modified = True
                 
         if modified or "*" in full_text:
             full_text = remove_asterisks_entirely(full_text)
@@ -519,6 +524,11 @@ def output_recreation_report(paths, data, filename):
         full_p_text = "".join(run.text for run in p.runs)
         normalized_p_text = full_p_text.replace('\\n', ' ').strip()
         
+        # Cover page date field override block sequence matching June 2026 format rules
+        if p_idx < 15 and ("may 2026" in normalized_p_text or "june 2026" in normalized_p_text):
+            p.text = current_date_text
+            continue
+
         if 145 <= p_idx <= 165: continue
 
         if "copy from WAB, 4.1.1 Current Environment Description" in normalized_p_text or "copy from WAB, 9.1 System Description" in normalized_p_text:
