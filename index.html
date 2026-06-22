@@ -92,17 +92,17 @@
                 pyodideModule = await loadPyodide();
                 
                 logToConsole("Loading core package manager (micropip)...");
-                // loadPackage allows us to boot up micropip to fetch pure-python wheels from PyPI
                 await pyodideModule.loadPackage(["micropip", "pandas"]);
                 
-                logToConsole("Fetching and installing 'openpyxl' via micropip...");
-                // Run micropip internally to pull openpyxl into the virtual environment
+                logToConsole("Fetching and installing pure-Python dependencies via micropip (openpyxl, python-docx)...");
+                // Run micropip internally to pull pure-python wheels directly from PyPI into browser memory
                 await pyodideModule.runPythonAsync(`
                     import micropip
                     await micropip.install('openpyxl')
+                    await micropip.install('python-docx')
                 `);
                 
-                logToConsole("Environment Ready. System dependencies successfully loaded.");
+                logToConsole("Environment Ready. All system dependencies successfully loaded into the browser sandbox!");
             } catch (err) {
                 logToConsole("Initialization Error: " + err.message);
             }
@@ -126,7 +126,7 @@
 
         async function executePythonPipeline() {
             if (!pyodideModule) {
-                alert("System runtime is still initializing. Please wait.");
+                alert("System runtime is still initializing dependencies. Please wait a moment.");
                 return;
             }
             
@@ -191,13 +191,14 @@ class BrowserLogRedirect:
 sys.stdout = BrowserLogRedirect()
 sys.stderr = BrowserLogRedirect()
 
-# Verify libraries are fully active inside this process thread
+# Verify all libraries are fully operational inside this environment thread
 try:
     import pandas as pd
     import openpyxl
-    print("Python Runtime: 'pandas' and 'openpyxl' modules verified and operational.")
+    from docx import Document
+    print("Python Runtime: 'pandas', 'openpyxl', and 'docx' modules verified and fully operational!")
 except ImportError as e:
-    print(f"Runtime Warning: Library component missing - {str(e)}")
+    print(f"Runtime Warning: Critical library component missing - {str(e)}")
 
 company_name = JS_COMPANY_NAME
 company_abbr = JS_COMPANY_ABBREVIATION
@@ -255,7 +256,6 @@ def process_dynamic_telemetry(paths):
 
     if paths["wab"]:
         try:
-            from docx import Document
             wab_doc = Document(paths["wab"])
             found_testee = False
             for p in wab_doc.paragraphs:
@@ -426,7 +426,6 @@ def process_dynamic_telemetry(paths):
     }
 
 def output_recreation_report(paths, data, filename):
-    from docx import Document
     if not paths["sra_template"]:
         print("Error: Aborted compilation. Missing an SRA Template file inside the repository directory.")
         return
@@ -494,12 +493,10 @@ def output_recreation_report(paths, data, filename):
         p_element.addnext(new_p._p)
         return new_p
 
-    # 1. Paragraph Modifications Layer
     for p_idx, p in enumerate(list(doc.paragraphs)):
         full_p_text = "".join(run.text for run in p.runs)
         normalized_p_text = full_p_text.replace('\\n', ' ').strip()
         
-        # Methodology Protection Zone
         if 145 <= p_idx <= 165: continue
 
         if "copy from WAB, 4.1.1 Current Environment Description" in normalized_p_text or "copy from WAB, 9.1 System Description" in normalized_p_text:
@@ -534,7 +531,6 @@ def output_recreation_report(paths, data, filename):
         else:
             replace_text_in_paragraph(p, replacements)
 
-    # 2. DOCUMENT CONTROL TABLES UPDATES
     try:
         t_signoff = doc.tables[0]
         t_signoff.cell(0, 0).text = "Version 0.1"
@@ -551,7 +547,6 @@ def output_recreation_report(paths, data, filename):
 
     vulnerability_table_count = 0
 
-    # 3. EXPLICIT INDEX SEGMENTATION FOR CLASSIFIED TABLES
     for table_idx, table in enumerate(doc.tables):
         if len(table.rows) == 0 or len(table.rows[0].cells) == 0: continue
         
@@ -570,12 +565,6 @@ def output_recreation_report(paths, data, filename):
                     update_cell_text_preserving_runs(row.cells[2], str(data["op_sec"]["Medium"]), align_center=True)
                     update_cell_text_preserving_runs(row.cells[3], str(data["op_sec"]["Low"]), align_center=True)
                     update_cell_text_preserving_runs(row.cells[4], str(data["op_sec"]["AOI"]), align_center=True)
-                elif "system acquisition" in lbl:
-                    row.cells[0].text = "System Acquisition, Development and Maintenance"
-                    update_cell_text_preserving_runs(row.cells[1], str(data["cr"]["High"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[2], str(data["cr"]["Medium"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[3], str(data["cr"]["Low"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[4], str(data["cr"]["AOI"]), align_center=True)
                 elif "grand total" in lbl:
                     row.cells[0].text = "Grand Total"
                     update_cell_text_preserving_runs(row.cells[1], str(data["totals"]["High"]), align_center=True)
