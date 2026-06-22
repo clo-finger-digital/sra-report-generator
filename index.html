@@ -161,6 +161,7 @@
             }
 
             const safeUnlink = (filename) => {
+                if (!filename) return;
                 try { pyodideModule.FS.unlink(filename); } catch(e) {}
             };
             
@@ -206,10 +207,10 @@ try:
     import pandas as pd
     import openpyxl
     from docx import Document
-    # Explicitly import alignment and styling dependencies to eliminate NameErrors
+    # Explicitly imported layout modules to bypass NameErrors across the virtual processing engine
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Pt, RGBColor
-    print("Python Runtime: All core third-party analytical modules and enum constraints successfully bound.")
+    print("Python Runtime: All analytical framework namespaces bound successfully.")
 except ImportError as e:
     print(f"Runtime Warning: Critical library component missing - {str(e)}")
 
@@ -242,8 +243,12 @@ def process_dynamic_telemetry(paths):
                     break
             if header_row_idx is None: header_row_idx = 0 
             df_aligned = pd.read_excel(file_path, skiprows=header_row_idx, sheet_name=sheet_idx)
-            df_aligned.columns = [str(c).strip() for c in df_aligned.columns]
-            return df_aligned
+            
+            # Explicit guard loop ensuring empty sheets won't cause Index out of bounds failures
+            if not df_aligned.empty:
+                df_aligned.columns = [str(c).strip() for c in df_aligned.columns]
+                return df_aligned
+            return pd.DataFrame()
         except Exception:
             return pd.DataFrame()
 
