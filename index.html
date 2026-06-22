@@ -231,6 +231,7 @@ sys_abbr = JS_SYSTEM_ABBREVIATION
 testee_name = JS_TESTEE_NAME
 testee_abbr = JS_TESTEE_ABBREVIATION
 
+# Consolidated production formatting date constants
 current_date_text = "June 2026"
 current_date_numeric = "22-06-2026"
 
@@ -483,27 +484,30 @@ def output_recreation_report(paths, data, filename):
     def replace_text_in_paragraph(p, lookup_tuples):
         full_text = "".join(run.text for run in p.runs)
         
-        # Core Methodology protection zones check bypass rule
-        if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
-            if "review and interview" not in full_text.lower():
-                return
-
-        # Direct explicit substitution sweep targeting the formatting splits across line-breaks
+        # PRIORITIZED HIGH-PRIORITY EXCEPTION: Bypasses filters if this specific block is matched
         lower_full = full_text.lower().replace(" ", "").replace("\\n", "")
         if "reviewandinterview" in lower_full and "checklists" in lower_full:
-            # Overwrite text using clear continuous assignments to completely dissolve internal XML split anomalies
             full_text = f"Review and interview sessions to check the security compliance of information systems of {testee_abbr} using security checklists were conducted by {company_abbr}. The following security domains were covered in the security review:"
-            modified = True
-        else:
-            modified = False
-            for k, val in lookup_tuples:
-                cleaned_key = k.strip("*").strip()
-                if k.lower() in full_text.lower() or cleaned_key.lower() in full_text.lower():
-                    pattern = re.compile(re.escape(k), re.IGNORECASE)
-                    full_text = pattern.sub(val, full_text)
-                    pattern_clean = re.compile(re.escape(cleaned_key), re.IGNORECASE)
-                    full_text = pattern_clean.sub(val, full_text)
-                    modified = True
+            if p.runs:
+                p.runs[0].text = full_text
+                for r in p.runs[1:]: r.text = ""
+            else:
+                p.text = full_text
+            return
+
+        # General Section 4 methodology boilerplate lockdown filter rule
+        if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
+            return
+
+        modified = False
+        for k, val in lookup_tuples:
+            cleaned_key = k.strip("*").strip()
+            if k.lower() in full_text.lower() or cleaned_key.lower() in full_text.lower():
+                pattern = re.compile(re.escape(k), re.IGNORECASE)
+                full_text = pattern.sub(val, full_text)
+                pattern_clean = re.compile(re.escape(cleaned_key), re.IGNORECASE)
+                full_text = pattern_clean.sub(val, full_text)
+                modified = True
                 
         if modified or "*" in full_text:
             full_text = remove_asterisks_entirely(full_text)
@@ -525,7 +529,7 @@ def output_recreation_report(paths, data, filename):
         full_p_text = "".join(run.text for run in p.runs)
         normalized_p_text = full_p_text.replace('\\n', ' ').strip()
         
-        # Enforced strict [Month] [Year] dynamic cover overlay formatting rule
+        # Title cover page selector rule targeting: May 2026 / June 2026 layout lines
         if p_idx < 15 and ("may 2026" in normalized_p_text.lower() or "june 2026" in normalized_p_text.lower()):
             p.text = current_date_text
             for run in p.runs:
