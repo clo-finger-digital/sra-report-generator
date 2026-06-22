@@ -434,9 +434,8 @@ def output_recreation_report(paths, data, filename):
     doc = Document(paths["sra_template"])
     risk_tier_string = f"{data['totals']['Medium']} Medium, {data['totals']['Low']} low risk and {data['totals']['AOI']} AOI items"
 
-    # Enforced literal ordering prevents smaller components from intercepting global macro brackets first
+    # Strict multi-case mapping arrays matching structural lookup keys inside your Word documents
     replacements = [
-        ("*information system name (information system abbreviation)*", f"{data['sys_name']} ({data['sys_abbr']})"),
         ("information system name (information system abbreviation)", f"{data['sys_name']} ({data['sys_abbr']})"),
         ("*(INFORMATION SYSTEM ABBREVIATION)*", data["sys_abbr"]),
         ("(INFORMATION SYSTEM ABBREVIATION)", data["sys_abbr"]),
@@ -451,8 +450,8 @@ def output_recreation_report(paths, data, filename):
         ("company abbreviation", data["company_abbr"]),
         ("COMPANY ABBREVIATION", data["company_abbr"]),
         ("testee name (testee abbreviation)", f"{data['testee_name']} ({data['testee_abbr']})"),
-        ("testee name", data["testee_name"]),
         ("testee abbreviation", data["testee_abbr"]),
+        ("testee name", data["testee_name"]),
         ("*grand total items*", risk_tier_string)
     ]
 
@@ -479,8 +478,7 @@ def output_recreation_report(paths, data, filename):
                 run.bold = bold
                 if color_rgb is not None: run.font.color.rgb = color_rgb
 
-    # Stripping leftover asterisks from final string fields
-    def clean_asterisks(text):
+    def remove_asterisks_entirely(text):
         return text.replace("*", "").strip()
 
     def replace_text_in_paragraph(p, lookup_tuples):
@@ -498,21 +496,13 @@ def output_recreation_report(paths, data, filename):
                 full_text = pattern_clean.sub(val, full_text)
                 modified = True
                 
-        if modified:
-            full_text = clean_asterisks(full_text)
+        if modified or "*" in full_text:
+            full_text = remove_asterisks_entirely(full_text)
             if p.runs:
                 p.runs[0].text = full_text
                 for r in p.runs[1:]: r.text = ""
             else:
                 p.text = full_text
-        else:
-            # Enforce clean sweep on lingering brackets
-            if "*" in full_text:
-                full_text = clean_asterisks(full_text)
-                if p.runs:
-                    p.runs[0].text = full_text
-                    for r in p.runs[1:]: r.text = ""
-                else: p.text = full_text
 
     def insert_paragraph_after(paragraph, text, style=None):
         new_p = doc.add_paragraph(style=style)
@@ -529,7 +519,7 @@ def output_recreation_report(paths, data, filename):
         if 145 <= p_idx <= 165: continue
 
         if "copy from WAB, 4.1.1 Current Environment Description" in normalized_p_text or "copy from WAB, 9.1 System Description" in normalized_p_text:
-            p.text = clean_asterisks(data["system_description"])
+            p.text = data["system_description"]
         elif "insert all under brief of work assignment under category b, 1. Scope of the services, 1.1" in normalized_p_text:
             if len(data["scope_paragraphs"]) > 0:
                 p.text = data["scope_paragraphs"][0]
@@ -576,7 +566,7 @@ def output_recreation_report(paths, data, filename):
 
         if table_idx in [3, 4, 5, 6, 7]: continue
 
-        # Google Colab Reference Mapping: Table 0 Re-construction (Sign-off)
+        # Table 0 Sign-Off Matrix Updates
         if table_idx == 0:
             try:
                 table.cell(0, 0).text = "Version 0.1"
@@ -585,7 +575,7 @@ def output_recreation_report(paths, data, filename):
                 table.cell(3, 0).text = "Approved by"; table.cell(3, 1).text = ""; table.cell(3, 2).text = "Document Approval"; table.cell(3, 3).text = ""                 
             except Exception: pass
 
-        # Google Colab Reference Mapping: Table 1 Re-construction (Change Control)
+        # Table 1 Change Control Matrix Updates
         elif table_idx == 1:
             try:
                 table.cell(0, 0).text = "Version"; table.cell(0, 1).text = "Date"; table.cell(0, 2).text = "Author"; table.cell(0, 3).text = "Summary of Changes"
@@ -612,7 +602,6 @@ def output_recreation_report(paths, data, filename):
             for r_idx, row in enumerate(table.rows):
                 for c_idx, cell in enumerate(row.cells):
                     apply_border(cell, color="4472c4", size="4", thick=False)
-                    # Force font matching rules on all remaining sub-elements
                     for cp in cell.paragraphs:
                         for crun in cp.runs:
                             crun.font.name = "Times New Roman"
