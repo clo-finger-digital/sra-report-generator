@@ -209,7 +209,7 @@ try:
     from docx import Document
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.shared import Pt, RGBColor
-    print("Python Runtime: All core third-party analytical modules and enum constraints successfully bound.")
+    print("Python Runtime: Framework packages and styling bindings successfully verified.")
 except ImportError as e:
     print(f"Runtime Warning: Critical library component missing - {str(e)}")
 
@@ -432,15 +432,16 @@ def output_recreation_report(paths, data, filename):
     doc = Document(paths["sra_template"])
     risk_tier_string = f"{data['totals']['Medium']} Medium, {data['totals']['Low']} low risk and {data['totals']['AOI']} AOI items"
 
-    # Explicit case variations registered inside the lookup matrix to catch broken Word XML layouts
+    # Multi-case string registries matching the format variant matrices inside the template file
     replacements = {
         "information system name (information system abbreviation)": f"{data['sys_name']} ({data['sys_abbr']})",
         "(INFORMATION SYSTEM ABBREVIATION)": data["sys_abbr"],
         "information system name": data["sys_name"],
         "SEMISSpW23": data["sys_abbr"],
+        "amount of total items identified": f"{data['grand_total']} items",
         "amount of total items": f"{data['grand_total']} items",
-        "grand total items": risk_tier_string,
         "grand total items identified": risk_tier_string,
+        "grand total items": risk_tier_string,
         "company name (company abbreviation)": f"{data['company_name']} ({data['company_abbr']})",
         "company name": data["company_name"],
         "company abbreviation": data["company_abbr"],
@@ -448,7 +449,6 @@ def output_recreation_report(paths, data, filename):
         "testee name (testee abbreviation)": f"{data['testee_name']} ({data['testee_abbr']})",
         "testee name": data["testee_name"],
         "testee abbreviation": data["testee_abbr"],
-        "amount of total items identified": f"{data['grand_total']} items",
         "*grand total items*": risk_tier_string
     }
 
@@ -478,29 +478,32 @@ def output_recreation_report(paths, data, filename):
     def remove_asterisk_pointers(text):
         return re.sub(r'\\*.*?\\*', '', text).strip()
 
-    # Upgraded implementation: Reconstructs paragraphs entirely to resolve split Runs formatting anomalies
+    # Paragraph Reconstruction Aggregator (Bypasses MS Word split-run anomalies)
     def replace_text_in_paragraph(p, lookup_dict):
         full_text = "".join(run.text for run in p.runs)
         
-        # Methodology Protection Zone bypass
+        # Methodology Protection Zone Check
         if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
             return
             
         modified = False
-        # Sort keys by length in descending order to prevent partial text overwrites
+        # Sort keys to evaluate full strings before sub-tokens
         for k in sorted(lookup_dict.keys(), key=len, reverse=True):
-            if k.lower() in full_text.lower():
-                # Case-insensitive replacement lookup strategy mapping variables
+            cleaned_key = k.strip("*")
+            if cleaned_key.lower() in full_text.lower() or k.lower() in full_text.lower():
+                # Flexible case-insensitive lookahead logic
                 pattern = re.compile(re.escape(k), re.IGNORECASE)
                 full_text = pattern.sub(lookup_dict[k], full_text)
+                # Fallback to clear stripped tokens
+                pattern_clean = re.compile(re.escape(cleaned_key), re.IGNORECASE)
+                full_text = pattern_clean.sub(lookup_dict[k], full_text)
                 modified = True
                 
         if modified:
             full_text = remove_asterisk_pointers(full_text)
             if p.runs:
                 p.runs[0].text = full_text
-                for r in p.runs[1:]:
-                    r.text = ""
+                for r in p.runs[1:]: r.text = ""
             else:
                 p.text = full_text
 
@@ -511,7 +514,7 @@ def output_recreation_report(paths, data, filename):
         p_element.addnext(new_p._p)
         return new_p
 
-    # 1. PARAGRAPH ITERATION AND SUBSTITUTION MATRIX
+    # 1. Standard Core Paragraph Evaluation Pipeline
     for p_idx, p in enumerate(list(doc.paragraphs)):
         full_p_text = "".join(run.text for run in p.runs)
         normalized_p_text = full_p_text.replace('\\n', ' ').strip()
@@ -567,13 +570,19 @@ def output_recreation_report(paths, data, filename):
 
     vulnerability_table_count = 0
 
-    # 3. EXPLICIT RE-SCAN MATRIX FOR EMBEDDED CONTROL TABLES
+    # 3. INTER-CELL SEARCH MATRIX FOR CLASSIFIED CONTROL TABLES
     for table_idx, table in enumerate(doc.tables):
         if len(table.rows) == 0 or len(table.rows[0].cells) == 0: continue
         
         if table_idx in [3, 4, 5, 6, 7]: continue
 
-        elif table_idx in [0, 1]:
+        # Cell Content Scanner Routine targeting deep table elements
+        for row in table.rows:
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    replace_text_in_paragraph(paragraph, replacements)
+
+        if table_idx in [0, 1]:
             for row in table.rows:
                 for cell in row.cells: apply_border(cell, color="000000", size="12", thick=True)
 
@@ -620,12 +629,6 @@ def output_recreation_report(paths, data, filename):
                         format_cell_text(cell, font_name="Times New Roman", size_pt=9, align_center=center_flag)
 
         else:
-            # Reconstruct inline text replacements located dynamically inside table cells
-            for row in table.rows:
-                for cell in row.cells:
-                    for paragraph in cell.paragraphs:
-                        replace_text_in_paragraph(paragraph, replacements)
-
             if "role description" in table.rows[0].cells[1].text.lower() and len(data["asset_rows"]) > 0:
                 table.cell(0, 0).text = "Item"; table.cell(0, 1).text = "Asset Description"; table.cell(0, 2).text = "Hostname / ID"; table.cell(0, 3).text = "IP Address / URL"; table.cell(0, 4).text = "OS Version"
                 for asset_row in data["asset_rows"]:
@@ -637,7 +640,7 @@ def output_recreation_report(paths, data, filename):
                     apply_border(cell, color="000000", size="4", thick=False)
 
     doc.save(filename)
-    print("Compilation complete. Ready to down-stream file download.")
+    print("Compilation complete. Download available.")
 
 def apply_border(cell, color="000000", size="4", thick=False):
     from docx.oxml import parse_xml
