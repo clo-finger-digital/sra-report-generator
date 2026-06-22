@@ -29,22 +29,22 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Information System Name</label>
-                        <input type="text" id="system_name" value="Social Media Text Analytics System" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                        <input type="text" id="system_name" value="Special Education Management Information System" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Information System Abbreviation</label>
-                        <input type="text" id="system_abbr" value="SMTAS" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                        <input type="text" id="system_abbr" value="SEMIS" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
                 </div>
             </section>
 
             <section class="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-xl space-y-4">
                 <h2 class="text-xl font-bold text-white mb-2">Data Source File Uploads</h2>
-                <p class="text-xs text-slate-400 mb-4">Note: The SRA Template is automatically loaded from your GitHub repository workspace.</p>
+                <p class="text-xs text-slate-400 mb-4">Note: The target SRA Template document is automatically pulled from your GitHub repository workspace environment.</p>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg">
-                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">1. WAB Document (.docx)</label>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">1. WAB Brief Document (.docx)</label>
                         <input type="file" id="file_wab" accept=".docx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
                     </div>
 
@@ -54,8 +54,18 @@
                     </div>
 
                     <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg">
-                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">3. Vulnerabilities (.xlsx)</label>
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">3. Vulnerability & Pentest Plan (.xlsx)</label>
                         <input type="file" id="file_vulnerability" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
+                    </div>
+
+                    <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">4. Code Review Follow-up Plan (.xlsx)</label>
+                        <input type="file" id="file_codereview" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
+                    </div>
+
+                    <div class="p-4 bg-slate-950 border border-dashed border-slate-700 rounded-lg md:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">5. SRA Assessment Control Questions (.xlsx)</label>
+                        <input type="file" id="file_questions" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
                     </div>
                 </div>
 
@@ -110,9 +120,11 @@
             const wabFile = await getFileBytes("file_wab");
             const inventoryFile = await getFileBytes("file_inventory");
             const vulnerabilityFile = await getFileBytes("file_vulnerability");
+            const codeReviewFile = await getFileBytes("file_codereview");
+            const questionsFile = await getFileBytes("file_questions");
 
             if (!wabFile) {
-                logToConsole("Aborted: WAB verification brief file must be uploaded before compilation.");
+                logToConsole("Aborted: WAB Brief file must be uploaded before compilation can occur.");
                 return;
             }
 
@@ -120,11 +132,15 @@
             try { pyodideModule.FS.unlink(wabFile.name); } catch(e){}
             if (inventoryFile) { try { pyodideModule.FS.unlink(inventoryFile.name); } catch(e){} }
             if (vulnerabilityFile) { try { pyodideModule.FS.unlink(vulnerabilityFile.name); } catch(e){} }
+            if (codeReviewFile) { try { pyodideModule.FS.unlink(codeReviewFile.name); } catch(e){} }
+            if (questionsFile) { try { pyodideModule.FS.unlink(questionsFile.name); } catch(e){} }
 
             // Write File Streams into Pyodide Virtual File System (FS)
             pyodideModule.FS.writeFile(wabFile.name, wabFile.data);
             if (inventoryFile) pyodideModule.FS.writeFile(inventoryFile.name, inventoryFile.data);
             if (vulnerabilityFile) pyodideModule.FS.writeFile(vulnerabilityFile.name, vulnerabilityFile.data);
+            if (codeReviewFile) pyodideModule.FS.writeFile(codeReviewFile.name, codeReviewFile.data);
+            if (questionsFile) pyodideModule.FS.writeFile(questionsFile.name, questionsFile.data);
 
             logToConsole("Injected source targets into the Pyodide WebAssessment file layer...");
 
@@ -135,6 +151,8 @@
             pyodideModule.globals.set("JS_WAB_NAME", wabFile.name);
             pyodideModule.globals.set("JS_INV_NAME", inventoryFile ? inventoryFile.name : null);
             pyodideModule.globals.set("JS_VUN_NAME", vulnerabilityFile ? vulnerabilityFile.name : null);
+            pyodideModule.globals.set("JS_CR_NAME", codeReviewFile ? codeReviewFile.name : null);
+            pyodideModule.globals.set("JS_Q_NAME", questionsFile ? questionsFile.name : null);
 
             const pythonScript = `
 import os
@@ -159,31 +177,26 @@ sys_abbr = JS_SYSTEM_ABBREVIATION
 print(f"Executing automation pipeline for: {sys_name} ({sys_abbr})")
 
 def identify_data_sources():
-    # Scan repository context for filename structures matching template configurations
     all_repo_files = os.listdir(".")
     target_template = None
-    
     for f in all_repo_files:
         f_lower = f.lower()
         if f_lower.endswith(".docx") and "sra" in f_lower and "template" in f_lower:
             target_template = f
             print(f"Auto-detected repository SRA Template: '{target_template}'")
             break
-            
     if not target_template:
-        # Fallback query handler if strict matching criteria returns empty array
         for f in all_repo_files:
             if f.endswith(".docx") and "template" in f.lower():
                 target_template = f
                 break
-
     return {
         "wab": JS_WAB_NAME,
         "sra_template": target_template,
         "inventory": JS_INV_NAME,
         "vulnerability": JS_VUN_NAME,
-        "questions": None,
-        "code_reviews": []
+        "questions": JS_Q_NAME,
+        "code_reviews": [JS_CR_NAME] if JS_CR_NAME else []
     }
 
 def process_dynamic_telemetry(paths):
@@ -214,8 +227,6 @@ def process_dynamic_telemetry(paths):
         try:
             from docx import Document
             wab_doc = Document(paths["wab"])
-            
-            # Dynamic matching scanning loop for Testee identifiers
             found_testee = False
             for p in wab_doc.paragraphs:
                 txt_clean = p.text.strip()
@@ -303,20 +314,83 @@ def process_dynamic_telemetry(paths):
 
     if paths["vulnerability"]:
         try:
-            s9_df = pd.read_excel(paths["vulnerability"], skiprows=1)
-            s9_df.columns = [str(c).strip() for c in s9_df.columns]
-            op_sec_counts["Low"] = len(s9_df)
-            for _, row in s9_df.iterrows():
-                vulnerability_rows.append([
-                    sys_abbr, "Target System Networks Framework", str(row.iloc[7]).strip(),
-                    str(row.iloc[8]).strip(), "Low [Low, Low]", "Safeguard configuration parameters."
-                ])
+            s9_df = read_and_align_sheet(paths["vulnerability"], ["Observe", "Findings#", "Protocol"])
+            if not s9_df.empty:
+                col_list = list(s9_df.columns)
+                id_col = next((c for c in col_list if "Findings#" in c or "Observe" in c), col_list[1])
+                asset_col = next((c for c in col_list if "Asset" in c or "System/" in c), col_list[2])
+                vun_col = next((c for c in col_list if "Vulnerability" in c or "Observation" in c or "Risk Name" in c), col_list[7])
+                threat_col = next((c for c in col_list if "Threat" in c or "Description" in c or "Details" in c), col_list[8])
+                rate_col = next((c for c in col_list if "Rating" in c or "Level" in c or "Risk Level" in c), col_list[10])
+                action_col = next((c for c in col_list if "Action" in c or "plan" in c), col_list[9])
+                domain_col = next((c for c in col_list if "Domain" in c), None)
+
+                if domain_col and rate_col:
+                    filter_mask = s9_df[domain_col].astype(str).str.contains('Opreation|Operation|Infrastructure', na=False, case=False)
+                    for rating in op_sec_counts.keys():
+                        op_sec_counts[rating] = int(len(s9_df[filter_mask & (s9_df[rate_col].astype(str).str.strip().str.lower() == rating.lower())]))
+
+                for _, row in s9_df.dropna(subset=[id_col]).iterrows():
+                    f_id = str(row[id_col]).strip()
+                    if f_id == 'nan' or not f_id: continue
+                    raw_rtg = str(row[rate_col]).strip() if rate_col in s9_df.columns else "Low"
+                    norm_rtg = "AOI" if "aoi" in raw_rtg.lower() or "interest" in raw_rtg.lower() else raw_rtg.capitalize()
+                    
+                    raw_ips = str(row[asset_col]).strip().replace(" ", "").split(",")
+                    formatted_ips = "\\n".join(raw_ips)
+
+                    record = [
+                        sys_abbr, formatted_ips, str(row[vun_col]).strip(),
+                        str(row[threat_col]).strip(), f"{norm_rtg} [{norm_rtg},{norm_rtg}]", str(row[action_col]).strip()
+                    ]
+                    if f_id.upper().startswith("V"): vulnerability_rows.append(record)
+                    elif f_id.upper().startswith("A"): penetration_rows.append(record)
         except Exception: pass
+
+    cr_counts = {"High": 0, "Medium": 0, "Low": 0, "AOI": 0}
+    for f in paths["code_reviews"]:
+        try:
+            xl_file = pd.ExcelFile(f)
+            for sheet in xl_file.sheet_names:
+                df = read_and_align_sheet(f, ["Observe", "Findings#"], sheet_idx=sheet)
+                if not df.empty:
+                    rc = [c for c in df.columns if "Rating" in c or "Level" in c]
+                    if rc:
+                        rc_col = rc[0]
+                        for rating in cr_counts.keys():
+                            cr_counts[rating] += int(len(df[df[rc_col].astype(str).str.strip().str.lower() == rating.lower()]))
+        except Exception: pass
+
+    if paths["inventory"]:
+        try:
+            inv_df = read_and_align_sheet(paths["inventory"], ["Item", "Role Description", "Hostname"])
+            if not inv_df.empty:
+                col_list = list(inv_df.columns)
+                item_col = next((c for c in col_list if "Item" in c or "No" in c), col_list[1])
+                desc_col = next((c for c in col_list if "Description" in c or "Role" in c), col_list[2])
+                host_col = next((c for c in col_list if "Hostname" in c or "ID" in c or "Tag" in c), col_list[4])
+                ip_col = next((c for c in col_list if "IP" in c or "URL" in c), col_list[5])
+                os_col = next((c for c in col_list if "OS" in c or "Version" in c), col_list[6])
+
+                for _, row in inv_df.dropna(subset=[item_col]).iterrows():
+                    itm = str(row[item_col]).strip()
+                    if itm.replace('.0','').isdigit() or len(itm) <= 2:
+                        asset_rows.append([
+                            itm.replace('.0',''), str(row[desc_col]).strip(), str(row[host_col]).strip(), 
+                            str(row[ip_col]).strip().replace("\\n", " "), str(row[os_col]).strip()
+                        ])
+        except Exception: pass
+
+    total_high = op_sec_counts["High"] + cr_counts["High"]
+    total_med = op_sec_counts["Medium"] + cr_counts["Medium"]
+    total_low = op_sec_counts["Low"] + cr_counts["Low"]
+    total_aoi = op_sec_counts["AOI"] + cr_counts["AOI"]
 
     return {
         "testee_name": testee_name, "testee_abbr": testee_abbr, "sys_name": sys_name, "sys_abbr": sys_abbr,
-        "company_name": company_name, "company_abbr": company_abbr, "op_sec": op_sec_counts, "cr": {"High": 0, "Medium": 0, "Low": 0, "AOI": 0},
-        "totals": op_sec_counts, "grand_total": op_sec_counts["Low"], "vulnerability_rows": vulnerability_rows,
+        "company_name": company_name, "company_abbr": company_abbr, "op_sec": op_sec_counts, "cr": cr_counts,
+        "totals": {"High": total_high, "Medium": total_med, "Low": total_low, "AOI": total_aoi},
+        "grand_total": total_high + total_med + total_low + total_aoi, "vulnerability_rows": vulnerability_rows,
         "penetration_rows": penetration_rows, "scope_paragraphs": scope_paragraphs, "objective_paragraphs": objective_paragraphs,
         "system_description": system_description_text, "asset_rows": asset_rows, "security_requirements": security_requirements
     }
@@ -395,7 +469,8 @@ def output_recreation_report(paths, data, filename):
         full_p_text = "".join(run.text for run in p.runs)
         normalized_p_text = full_p_text.replace('\\n', ' ').strip()
         
-        # if 145 <= p_idx <= 165: continue
+        # Methodology Protection Zone
+        if 145 <= p_idx <= 165: continue
 
         if "copy from WAB, 4.1.1 Current Environment Description" in normalized_p_text or "copy from WAB, 9.1 System Description" in normalized_p_text:
             p.text = remove_asterisk_pointers(data["system_description"])
@@ -465,6 +540,12 @@ def output_recreation_report(paths, data, filename):
                     update_cell_text_preserving_runs(row.cells[2], str(data["op_sec"]["Medium"]), align_center=True)
                     update_cell_text_preserving_runs(row.cells[3], str(data["op_sec"]["Low"]), align_center=True)
                     update_cell_text_preserving_runs(row.cells[4], str(data["op_sec"]["AOI"]), align_center=True)
+                elif "system acquisition" in lbl:
+                    row.cells[0].text = "System Acquisition, Development and Maintenance"
+                    update_cell_text_preserving_runs(row.cells[1], str(data["cr"]["High"]), align_center=True)
+                    update_cell_text_preserving_runs(row.cells[2], str(data["cr"]["Medium"]), align_center=True)
+                    update_cell_text_preserving_runs(row.cells[3], str(data["cr"]["Low"]), align_center=True)
+                    update_cell_text_preserving_runs(row.cells[4], str(data["cr"]["AOI"]), align_center=True)
                 elif "grand total" in lbl:
                     row.cells[0].text = "Grand Total"
                     update_cell_text_preserving_runs(row.cells[1], str(data["totals"]["High"]), align_center=True)
@@ -494,15 +575,25 @@ def output_recreation_report(paths, data, filename):
             for r_idx, row in enumerate(table.rows):
                 for c_idx, cell in enumerate(row.cells):
                     apply_border(cell, color="000000", size="4", thick=False)
+                    if r_idx > 0:
+                        center_flag = (c_idx in [3, 4])
+                        format_cell_text(cell, font_name="Times New Roman", size_pt=9, align_center=center_flag)
 
         else:
+            # Reconstruct Asset Identification Grid dynamically if index matches
+            if "role description" in table.rows[0].cells[1].text.lower() and len(data["asset_rows"]) > 0:
+                table.cell(0, 0).text = "Item"; table.cell(0, 1).text = "Asset Description"; table.cell(0, 2).text = "Hostname / ID"; table.cell(0, 3).text = "IP Address / URL"; table.cell(0, 4).text = "OS Version"
+                for asset_row in data["asset_rows"]:
+                    r_cells = table.add_row().cells
+                    for i, val in enumerate(asset_row): r_cells[i].text = val
+
             for row in table.rows:
                 for cell in row.cells:
                     apply_border(cell, color="000000", size="4", thick=False)
                     cell.text = remove_asterisk_pointers(cell.text)
 
     doc.save(filename)
-    print("Compilation complete.")
+    print("Compilation finished cleanly.")
 
 def apply_border(cell, color="000000", size="4", thick=False):
     from docx.oxml import parse_xml
