@@ -3,20 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SRA Report Automation Hub</title>
+    <title>SRA Report Automation Pipeline Hub</title>
+    <!-- Tailwind CSS for modern production look -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Pyodide Core Engine for Client-Side Python Execution -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased">
     <div class="max-w-4xl mx-auto px-4 py-12">
         <header class="border-b border-slate-800 pb-6 mb-8">
-            <h1 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">SRA Report Pipeline Hub</h1>
-            <p class="mt-2 text-sm text-slate-400">Execute multi-source Python compilation inside the browser via GitHub Pages</p>
+            <h1 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">SRA Pipeline Hub</h1>
+            <p class="mt-2 text-sm text-slate-400">Compile mandatory WAB Briefs and follow up plans into structured Security Risk Assessment Reports completely in-browser</p>
         </header>
 
         <main class="space-y-6">
+            <!-- UI VARIABLES PANEL -->
             <section class="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-xl space-y-4">
-                <h2 class="text-xl font-bold text-white mb-4">Pipeline Injector Variables</h2>
+                <h2 class="text-xl font-bold text-white mb-4">SRA Pipeline Injector Variables</h2>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -29,64 +32,50 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Information System Name</label>
-                        <input type="text" id="system_name" value="Special Education Management Information System" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                        <input type="text" id="system_name" value="School Dental Care Service Management and Information in Linked Environment" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Information System Abbreviation</label>
-                        <input type="text" id="system_abbr" value="SEMIS" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                        <input type="text" id="system_abbr" value="SMILE" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Testee Name</label>
-                        <input type="text" id="testee_name" value="Education Bureau" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                        <input type="text" id="testee_name" value="Department of Health" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Testee Abbreviation</label>
-                        <input type="text" id="testee_abbr" value="EDB" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+                        <input type="text" id="testee_abbr" value="DH" class="w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
                     </div>
                 </div>
             </section>
 
+            <!-- MANDATORY DATA SOURCE FILE UPLOADS -->
             <section class="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-xl space-y-4">
                 <h2 class="text-xl font-bold text-white mb-2">Data Source File Uploads</h2>
-                <p class="text-xs text-slate-400 mb-4">Note: Only WAB Brief and Vulnerability Follow-up Plan are required to execute compilation.</p>
+                <p class="text-xs text-slate-400 mb-4">Note: The target SRA Template file is fetched dynamically from your workspace path (`./new SRA report template.docx`).</p>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div class="p-4 bg-slate-950 border border-dashed border-blue-500/50 rounded-lg">
-                        <label class="block text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">1. WAB Brief Document (.docx) *Required</label>
+                        <label class="block text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">Work Assignment Brief (.docx) *Required</label>
                         <input type="file" id="file_wab" accept=".docx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-900/50 file:text-blue-200 hover:file:bg-blue-800 cursor-pointer">
                     </div>
-
                     <div class="p-4 bg-slate-950 border border-dashed border-blue-500/50 rounded-lg">
-                        <label class="block text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">2. Vulnerability & Pentest Follow-up Plan (.xlsx) *Required</label>
-                        <input type="file" id="file_vulnerability" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-900/50 file:text-blue-200 hover:file:bg-blue-800 cursor-pointer">
-                    </div>
-
-                    <div class="p-4 bg-slate-950 border border-dashed border-slate-800 rounded-lg opacity-60 hover:opacity-100 transition">
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">3. Asset Inventory (.xlsx) [Optional]</label>
-                        <input type="file" id="file_inventory" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
-                    </div>
-
-                    <div class="p-4 bg-slate-950 border border-dashed border-slate-800 rounded-lg opacity-60 hover:opacity-100 transition">
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">4. Code Review Follow-up Plan (.xlsx) [Optional]</label>
-                        <input type="file" id="file_codereview" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
-                    </div>
-
-                    <div class="p-4 bg-slate-950 border border-dashed border-slate-800 rounded-lg md:col-span-2 opacity-60 hover:opacity-100 transition">
-                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">5. SRA Assessment Control Questions (.xlsx) [Optional]</label>
-                        <input type="file" id="file_questions" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer">
+                        <label class="block text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">Vulnerability Follow Up Plan (.xlsx) *Required</label>
+                        <input type="file" id="file_plan" accept=".xlsx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-900/50 file:text-blue-200 hover:file:bg-blue-800 cursor-pointer">
                     </div>
                 </div>
 
                 <div class="pt-4">
-                    <button id="run_pipeline_btn" onclick="executePythonPipeline()" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-3 px-4 rounded transition duration-200 shadow-lg disabled:opacity-50">
+                    <button id="run_pipeline_btn" onclick="executeSraPipeline()" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold py-3 px-4 rounded transition duration-200 shadow-lg disabled:opacity-50">
                         Compile SRA Report
                     </button>
                 </div>
             </section>
 
+            <!-- Console Log Window -->
             <section class="bg-slate-950 rounded-lg border border-slate-800 p-4 shadow-inner">
                 <span class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">System Execution Log</span>
-                <pre id="console_output" class="text-xs font-mono text-emerald-400 overflow-x-auto whitespace-pre-wrap max-h-64">System initialized. Waiting for source files...</pre>
+                <pre id="console_output" class="text-xs font-mono text-emerald-400 overflow-x-auto whitespace-pre-wrap max-h-64">System initialized. Waiting for files...</pre>
             </section>
         </main>
     </div>
@@ -96,20 +85,20 @@
 
         async function initPyodide() {
             try {
-                logToConsole("Loading Pyodide Core Engine...");
+                logToConsole("Loading Pyodide Core Engine Environment...");
                 pyodideModule = await loadPyodide();
                 
-                logToConsole("Loading core package manager (micropip)...");
+                logToConsole("Loading package distribution manager tools (micropip)...");
                 await pyodideModule.loadPackage(["micropip", "pandas"]);
                 
-                logToConsole("Fetching and installing pure-Python dependencies via micropip (openpyxl, python-docx)...");
+                logToConsole("Installing handlers (openpyxl, python-docx)...");
                 await pyodideModule.runPythonAsync(`
                     import micropip
                     await micropip.install('openpyxl')
                     await micropip.install('python-docx')
                 `);
                 
-                logToConsole("Environment Ready. All system dependencies successfully loaded into the browser sandbox!");
+                logToConsole("Environment Ready. SRA Automation workspace active!");
             } catch (err) {
                 logToConsole("Initialization Error: " + err.message);
             }
@@ -131,9 +120,9 @@
             return { name: file.name, data: new Uint8Array(buffer) };
         }
 
-        async function executePythonPipeline() {
+        async function executeSraPipeline() {
             if (!pyodideModule) {
-                alert("System runtime is still initializing dependencies. Please wait a moment.");
+                alert("Runtime system packages are still initializing. Please wait a brief moment.");
                 return;
             }
             
@@ -145,47 +134,44 @@
             const tAbbr = document.getElementById("testee_abbr").value;
 
             const wabFile = await getFileBytes("file_wab");
-            const inventoryFile = await getFileBytes("file_inventory");
-            const vulnerabilityFile = await getFileBytes("file_vulnerability");
-            const codeReviewFile = await getFileBytes("file_codereview");
-            const questionsFile = await getFileBytes("file_questions");
+            const planFile = await getFileBytes("file_plan");
 
-            if (!wabFile || !vulnerabilityFile) {
-                logToConsole("Aborted: WAB Brief and Vulnerability Follow-up Plan are required to run compilation.");
-                alert("Please upload both the WAB Document and Vulnerability Follow-up Plan.");
+            if (!wabFile || !planFile) {
+                logToConsole("Validation Failed: Compile aborted. Missing source data uploads.");
+                alert("Please upload both required data files before compiling.");
                 return;
             }
 
-            logToConsole("Pulling template document via relative repo tree check...");
+            const today = new Date();
+            const monthText = today.toLocaleDateString("en-US", { month: "long" });
+            const yearText = today.getFullYear();
+            const computedDateText = `${monthText} ${yearText}`;
+            
+            const dayNum = String(today.getDate()).padStart(2, '0');
+            const monthNum = String(today.getMonth() + 1).padStart(2, '0');
+            const computedDateNumeric = `${dayNum}-${monthNum}-${yearText}`;
+
+            logToConsole(`Date Pipeline Sync: Active target mapped to ${computedDateText}`);
+
+            logToConsole("Pulling raw SRA report template docx file...");
             try {
                 const response = await fetch("./new%20SRA%20report%20template.docx");
-                if (!response.ok) throw new Error("Template access error 404.");
+                if (!response.ok) throw new Error("Template access error 404. Check filename and path.");
                 const templateBuffer = await response.arrayBuffer();
                 const templateData = new Uint8Array(templateBuffer);
                 
-                try { pyodideModule.FS.unlink("new_sra_template.docx"); } catch(e){}
-                pyodideModule.FS.writeFile("new_sra_template.docx", templateData);
+                try { pyodideModule.FS.unlink("new_SRA_report_template.docx"); } catch(e){}
+                pyodideModule.FS.writeFile("new_SRA_report_template.docx", templateData);
             } catch (err) {
-                logToConsole("FS Error: Template missing from root folder path.");
+                logToConsole("FS Template Error: " + err.message);
                 return;
             }
 
-            const safeUnlink = (filename) => {
-                if (!filename) return;
-                try { pyodideModule.FS.unlink(filename); } catch(e) {}
-            };
-            
-            safeUnlink(wabFile.name);
-            safeUnlink(vulnerabilityFile.name);
-            if (inventoryFile) safeUnlink(inventoryFile.name);
-            if (codeReviewFile) safeUnlink(codeReviewFile.name);
-            if (questionsFile) safeUnlink(questionsFile.name);
-
+            try { pyodideModule.FS.unlink(wabFile.name); } catch(e) {}
             pyodideModule.FS.writeFile(wabFile.name, wabFile.data);
-            pyodideModule.FS.writeFile(vulnerabilityFile.name, vulnerabilityFile.data);
-            if (inventoryFile) pyodideModule.FS.writeFile(inventoryFile.name, inventoryFile.data);
-            if (codeReviewFile) pyodideModule.FS.writeFile(codeReviewFile.name, codeReviewFile.data);
-            if (questionsFile) pyodideModule.FS.writeFile(questionsFile.name, questionsFile.data);
+
+            try { pyodideModule.FS.unlink(planFile.name); } catch(e) {}
+            pyodideModule.FS.writeFile(planFile.name, planFile.data);
 
             pyodideModule.globals.set("JS_COMPANY_NAME", cName);
             pyodideModule.globals.set("JS_COMPANY_ABBREVIATION", cAbbr);
@@ -194,16 +180,14 @@
             pyodideModule.globals.set("JS_TESTEE_NAME", tName);
             pyodideModule.globals.set("JS_TESTEE_ABBREVIATION", tAbbr);
             pyodideModule.globals.set("JS_WAB_NAME", wabFile.name);
-            pyodideModule.globals.set("JS_VUN_NAME", vulnerabilityFile.name);
-            pyodideModule.globals.set("JS_INV_NAME", inventoryFile ? inventoryFile.name : null);
-            pyodideModule.globals.set("JS_CR_NAME", codeReviewFile ? codeReviewFile.name : null);
-            pyodideModule.globals.set("JS_Q_NAME", questionsFile ? questionsFile.name : null);
+            pyodideModule.globals.set("JS_PLAN_NAME", planFile.name);
+            pyodideModule.globals.set("JS_COMPUTED_DATE_TEXT", computedDateText);
+            pyodideModule.globals.set("JS_COMPUTED_DATE_NUMERIC", computedDateNumeric);
 
             const pythonScript = `
 import os
 import sys
 import re
-from datetime import datetime
 
 class BrowserLogRedirect:
     def write(self, s):
@@ -214,15 +198,12 @@ class BrowserLogRedirect:
 sys.stdout = BrowserLogRedirect()
 sys.stderr = BrowserLogRedirect()
 
-try:
-    import pandas as pd
-    import openpyxl
-    from docx import Document
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.shared import Pt, RGBColor
-    print("Python Runtime: Engine operational.")
-except ImportError as e:
-    print(f"Runtime Warning: Component missing - {str(e)}")
+from docx import Document
+from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from openpyxl import load_workbook
+from docx.oxml import CT_Tbl, OxmlElement
+from docx.oxml.ns import qn
 
 company_name = JS_COMPANY_NAME
 company_abbr = JS_COMPANY_ABBREVIATION
@@ -231,274 +212,265 @@ sys_abbr = JS_SYSTEM_ABBREVIATION
 testee_name = JS_TESTEE_NAME
 testee_abbr = JS_TESTEE_ABBREVIATION
 
-current_date_text = "June 2026"
-current_date_numeric = "22-06-2026"
+current_date_text = JS_COMPUTED_DATE_TEXT
+current_date_numeric = JS_COMPUTED_DATE_NUMERIC
 
-def identify_data_sources():
-    return {
-        "wab": JS_WAB_NAME,
-        "sra_template": "new_sra_template.docx",
-        "inventory": JS_INV_NAME,
-        "vulnerability": JS_VUN_NAME,
-        "questions": JS_Q_NAME,
-        "code_reviews": [JS_CR_NAME] if JS_CR_NAME else []
-    }
+def insert_paragraph_after(paragraph, text, style=None):
+    doc_instance = paragraph.part.document
+    new_p = doc_instance.add_paragraph(style=style)
+    new_p.text = text
+    p_element = paragraph._p
+    p_element.addnext(new_p._p)
+    return new_p
 
-def process_dynamic_telemetry(paths):
-    def read_and_align_sheet(file_path, landmarks, sheet_idx=0):
-        if not file_path: return pd.DataFrame()
-        try:
-            df_raw = pd.read_excel(file_path, header=None, sheet_name=sheet_idx)
-            header_row_idx = None
-            for idx, row in df_raw.iterrows():
-                row_str = " ".join(row.fillna("").astype(str))
-                if any(x in row_str for x in landmarks):
-                    header_row_idx = idx
-                    break
-            if header_row_idx is None: header_row_idx = 0 
-            df_aligned = pd.read_excel(file_path, skiprows=header_row_idx, sheet_name=sheet_idx)
-            if not df_aligned.empty:
-                df_aligned.columns = [str(c).strip() for c in df_aligned.columns]
-                return df_aligned
-            return pd.DataFrame()
-        except Exception:
-            return pd.DataFrame()
+def apply_text_styling_and_borders(cell, text, is_header=False, center=False):
+    cell.text = ""
+    p = cell.paragraphs[0]
+    if center:
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run(text)
+    run.font.name = 'Times New Roman'
+    run.font.size = Pt(10)
+    if is_header:
+        run.bold = True
+        
+    tcPr = cell._tc.get_or_add_tcPr()
+    tcBorders = OxmlElement('w:tcBorders')
+    for border_name in ['top', 'left', 'bottom', 'right']:
+        border = OxmlElement(f'w:{border_name}')
+        border.set(qn('w:val'), 'single')
+        border.set(qn('w:sz'), '4')
+        border.set(qn('w:space'), '0')
+        border.set(qn('w:color'), 'auto')
+        tcBorders.append(border)
+    tcPr.append(tcBorders)
 
-    scope_paragraphs, objective_paragraphs, security_requirements = [], [], []
+def normalize_domain_key(text):
+    if not text: return "compliance"
+    t = str(text).strip().lower().replace(" ", "").replace(",", "").replace("-", "")
+    if "managementrespons" in t: return "management"
+    if "itsecuritypolic" in t: return "policy"
+    if "humanresource" in t: return "human"
+    if "assetmanag" in t: return "asset"
+    if "accesscontrol" in t: return "access"
+    if "cryptograph" in t: return "crypto"
+    if "physical" in t: return "physical"
+    if "operation" in t: return "operations"
+    if "communication" in t: return "communications"
+    if "systemacquisition" in t or "developmentandmaintenance" in t: return "development"
+    if "outsourcing" in t: return "outsourcing"
+    if "incident" in t: return "incident"
+    if "businesscontinuity" in t or "aspectsofbc" in t: return "continuity"
+    if "compliance" in t: return "compliance"
+    return "compliance"
+
+def process_dynamic_telemetry(wab_path, xlsx_path):
     system_description_text = ""
-    asset_rows = []
+    security_requirements = []
+    
+    # Storage maps using vulnerability signature as primary unique hash grouping key
+    v_groups = {}
+    a_groups = {}
+    c_groups = {}
+    
+    domain_matrix = {
+        "management": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+        "policy": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+        "human": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+        "asset": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+        "access": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+        "crypto": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+        "physical": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+        "operations": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+        "communications": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+        "development": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+        "outsourcing": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+        "incident": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+        "continuity": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+        "compliance": {"high": 0, "medium": 0, "low": 0, "aoi": 0},
+    }
+    
+    global_metrics = {"high": 0, "medium": 0, "low": 0, "aoi": 0}
+    
+    try:
+        wab_doc = Document(wab_path)
+        capture_desc, capture_req = False, False
+        for p in wab_doc.paragraphs:
+            txt = "".join(run.text for run in p.runs).strip()
+            normalized_txt = txt.replace('\\xa0', ' ').strip()
+            lower_clean = normalized_txt.lower().replace(" ", "").replace(",", "")
+            
+            if "4.1.1" in normalized_txt and "Current Environment" in normalized_txt:
+                capture_desc = True
+                continue
+            elif "4.1.2" in normalized_txt or "Project Management" in normalized_txt:
+                capture_desc = False
 
-    W_NAMESPACE = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            # DYNAMIC EXTRACTION BOUNDARY CONDITION MATCH
+            if "form" in lower_clean and "securitybaseline" in lower_clean and "assessmentandaudit" in lower_clean:
+                capture_req = True
+                continue
+            elif capture_req and "gather" in lower_clean:
+                capture_req = False
 
-    if paths["wab"]:
-        try:
-            wab_doc = Document(paths["wab"])
-            capture_scope, capture_obj, capture_desc, capture_req = False, False, False, False
-            for p in wab_doc.paragraphs:
-                txt = "".join(run.text for run in p.runs).strip()
-                normalized_txt = txt.replace('\\xa0', ' ').strip()
+            if capture_desc and len(normalized_txt) > 2:
+                if not (normalized_txt.startswith("4.1") or normalized_txt.startswith("4.1.1")):
+                    if "USER REQUIREMENTS" not in normalized_txt and "Current Environment Description" not in normalized_txt:
+                        if not system_description_text:
+                            system_description_text = normalized_txt
+                        else:
+                            system_description_text += "\\n" + normalized_txt
+
+            if capture_req and len(normalized_txt) > 0:
+                if normalized_txt not in security_requirements and "baseline" not in lower_clean and "form" not in lower_clean:
+                    cleaned_bullet = re.sub(r'^\\([ivxLCDM]+\\)\\s*', '', normalized_txt).strip()
+                    if cleaned_bullet:
+                        security_requirements.append(cleaned_bullet)
+    except Exception as e:
+        print(f"Telemetry warning (WAB): {str(e)}")
+
+    try:
+        wb = load_workbook(xlsx_path, data_only=True)
+        sheet = wb.active
+        for row_idx, row in enumerate(sheet.iter_rows(values_only=True)):
+            if row_idx < 2 or row[2] is None: continue
+            obs_num = str(row[2]).strip()
+            
+            is_v = obs_num.upper().startswith("V")
+            is_a = obs_num.upper().startswith("A")
+            is_c = obs_num.upper().startswith("C")
+            if not (is_v or is_a or is_c): continue
+            
+            system_affected = sys_abbr 
+            raw_ip = str(row[3]).strip() if row[3] is not None else ""
+            raw_port = str(row[4]).strip() if (len(row) > 4 and row[4] is not None) else ""
+            
+            # Smart asset IP formatting rule: add colon only if both exist and aren't duplicated inside strings
+            if raw_ip and raw_port and ":" not in raw_ip and str(raw_port) not in raw_ip:
+                asset_location = f"{raw_ip}:{raw_port}"
+            else:
+                asset_location = raw_ip if raw_ip else "System Codebase" if is_c else sys_abbr
+
+            vuln_name = str(row[8]).strip() if row[8] is not None else ""    
+            threat_desc = str(row[9]).strip() if row[9] is not None else ""  
+            remediation = str(row[10]).strip() if row[10] is not None else "" 
+            severity = str(row[11]).strip() if row[11] is not None else "Low" 
+            raw_domain = str(row[5]).strip() if (len(row) > 5 and row[5] is not None) else "Compliance"
+            
+            sev_title = severity.strip().title()
+            if "aoi" in severity.lower(): sev_title = "AOI"
+            sev_key = "aoi" if sev_title == "AOI" else sev_title.lower()
+
+            # Mirror the Risk Level directly into matrix bracket parameters 
+            if sev_title == "AOI":
+                combined_risk_rating = "AOI"
+            else:
+                combined_risk_rating = f"{sev_title}\\n[{sev_title},{sev_title}]"
+
+            # Route target hash maps 
+            if is_v: target_dict = v_groups
+            elif is_a: target_dict = a_groups
+            else: target_dict = c_groups
+
+            unique_hash_key = (vuln_name.lower().strip(), threat_desc.lower().strip())
+
+            if unique_hash_key not in target_dict:
+                target_dict[unique_hash_key] = {
+                    "sys": system_affected,
+                    "locations": [asset_location],
+                    "name": vuln_name,
+                    "threat": threat_desc,
+                    "rating": combined_risk_rating,
+                    "fix": remediation,
+                    "sev_key": sev_key,
+                    "domain": raw_domain
+                }
+            else:
+                if asset_location not in target_dict[unique_hash_key]["locations"]:
+                    target_dict[unique_hash_key]["locations"].append(asset_location)
+
+            # Increment global scoring counters 
+            if sev_key in global_metrics:
+                global_metrics[sev_key] += 1
+            
+            dom_mapped_key = normalize_domain_key(raw_domain)
+            if sev_key in domain_matrix[dom_mapped_key]:
+                domain_matrix[dom_mapped_key][sev_key] += 1
                 
-                if "SCOPE OF THE SERVICES" in normalized_txt:
-                    capture_scope = True
-                    continue
-                elif "BACKGROUND" in normalized_txt:
-                    capture_scope = False
+    except Exception as e:
+        print(f"Telemetry warning (Excel Pulling Parser): {str(e)}")
 
-                if "PROJECT OBJECTIVES" in normalized_txt:
-                    capture_obj = True
-                    continue
-                elif "PROJECT REQUIREMENTS" in normalized_txt or "USER REQUIREMENTS" in normalized_txt:
-                    capture_obj = False
-
-                if "4.1.1" in normalized_txt and "Current Environment" in normalized_txt:
-                    capture_desc = True
-                    continue
-                elif "4.1.2" in normalized_txt or "Project Management" in normalized_txt:
-                    capture_desc = False
-
-                if "GOVERNMENT STANDARDS, METHODOLOGIES AND QUALITY REQUIREMENTS" in normalized_txt:
-                    capture_req = True
-                    continue
-                elif "PROJECT DELIVERABLES, MILESTONES & IMPLEMENTATION SCHEDULE" in normalized_txt:
-                    capture_req = False
-
-                if capture_scope and len(normalized_txt) > 0:
-                    if normalized_txt.startswith("To"):
-                        cleaned_txt = normalized_txt.replace("the systems and their classification specified in Section 2 (“Systems”)", "the selected systems (“Systems”)")
-                        cleaned_txt = re.sub(r'^[\\t\\s]*\\([a-z]\\)[\\t\\s]*', '', cleaned_txt, flags=re.IGNORECASE).strip()
-                        if cleaned_txt and cleaned_txt not in scope_paragraphs:
-                            scope_paragraphs.append(cleaned_txt)
-
-                if capture_obj and len(normalized_txt) > 0:
-                    cleaned_txt = re.sub(r'^3\\.\\d+\\s*', '', normalized_txt).strip()
-                    cleaned_txt = re.sub(r'-', '', cleaned_txt).strip()
-                    if cleaned_txt and cleaned_txt not in objective_paragraphs:
-                        objective_paragraphs.append(cleaned_txt)
-
-                if capture_desc and len(normalized_txt) > 2:
-                    if not (normalized_txt.startswith("4.1") or normalized_txt.startswith("4.1.1")):
-                        if "USER REQUIREMENTS" not in normalized_txt and "Current Environment Description" not in normalized_txt:
-                            if not system_description_text:
-                                system_description_text = normalized_txt
-                            else:
-                                system_description_text += "\\n" + normalized_txt
-
-                if capture_req and len(normalized_txt) > 0:
-                    if normalized_txt.startswith("Where necessary"):
-                        capture_req = False
-                        continue
-                    pPr = p._p.get_or_add_pPr()
-                    numPr = pPr.find(f'{{{W_NAMESPACE}}}numPr')
-                    if numPr is not None:
-                        ilvl = numPr.find(f'{{{W_NAMESPACE}}}ilvl')
-                        if ilvl is not None and ilvl.get(f'{{{W_NAMESPACE}}}val') == "0":
-                            if normalized_txt not in security_requirements:
-                                security_requirements.append(normalized_txt)
-        except Exception: pass
-
-    if not system_description_text:
-        system_description_text = "System to support processing criteria frameworks."
-
-    op_sec_counts = {"High": 0, "Medium": 0, "Low": 0, "AOI": 0}
-    vulnerability_rows, penetration_rows = [], []
-
-    if paths["vulnerability"]:
-        try:
-            s9_df = read_and_align_sheet(paths["vulnerability"], ["Observe", "Findings#", "Protocol"])
-            if not s9_df.empty:
-                col_list = list(s9_df.columns)
-                id_col = next((c for c in col_list if "Findings#" in c or "Observe" in c), col_list[1])
-                asset_col = next((c for c in col_list if "Asset" in c or "System/" in c), col_list[2])
-                vun_col = next((c for c in col_list if "Vulnerability" in c or "Observation" in c or "Risk Name" in c), col_list[7])
-                threat_col = next((c for c in col_list if "Threat" in c or "Description" in c or "Details" in c), col_list[8])
-                rate_col = next((c for c in col_list if "Rating" in c or "Level" in c or "Risk Level" in c), col_list[10])
-                action_col = next((c for c in col_list if "Action" in c or "plan" in c), col_list[9])
-                domain_col = next((c for c in col_list if "Domain" in c), None)
-
-                if domain_col and rate_col:
-                    filter_mask = s9_df[domain_col].astype(str).str.contains('Opreation|Operation|Infrastructure', na=False, case=False)
-                    for rating in op_sec_counts.keys():
-                        op_sec_counts[rating] = int(len(s9_df[filter_mask & (s9_df[rate_col].astype(str).str.strip().str.lower() == rating.lower())]))
-
-                for _, row in s9_df.dropna(subset=[id_col]).iterrows():
-                    f_id = str(row[id_col]).strip()
-                    if f_id == 'nan' or not f_id: continue
-                    raw_rtg = str(row[rate_col]).strip().lower()
-                    
-                    if "high" in raw_rtg: norm_rtg = "High"
-                    elif "medium" in raw_rtg: norm_rtg = "Medium"
-                    elif "aoi" in raw_rtg or "interest" in raw_rtg: norm_rtg = "AOI"
-                    else: norm_rtg = "Low"
-                    
-                    raw_ips = str(row[asset_col]).strip().replace(" ", "").split(",")
-                    formatted_ips = "\\n".join(raw_ips)
-
-                    record = [
-                        sys_abbr, formatted_ips, str(row[vun_col]).strip(),
-                        str(row[threat_col]).strip(), f"{norm_rtg} [{norm_rtg},{norm_rtg}]", str(row[action_col]).strip()
-                    ]
-                    if f_id.upper().startswith("V"): vulnerability_rows.append(record)
-                    elif f_id.upper().startswith("A"): penetration_rows.append(record)
-        except Exception: pass
-
-    cr_counts = {"High": 0, "Medium": 0, "Low": 0, "AOI": 0}
-    for f in paths["code_reviews"]:
-        if not f: continue
-        try:
-            xl_file = pd.ExcelFile(f)
-            for sheet in xl_file.sheet_names:
-                df = read_and_align_sheet(f, ["Observe", "Findings#"], sheet_idx=sheet)
-                if not df.empty:
-                    rc = [c for c in df.columns if "Rating" in c or "Level" in c]
-                    if rc:
-                        rc_col = rc[0]
-                        for rating in cr_counts.keys():
-                            cr_counts[rating] += int(len(df[df[rc_col].astype(str).str.strip().str.lower() == rating.lower()]))
-        except Exception: pass
-
-    if paths["inventory"]:
-        try:
-            inv_df = read_and_align_sheet(paths["inventory"], ["Item", "Role Description", "Hostname"])
-            if not inv_df.empty:
-                col_list = list(inv_df.columns)
-                item_col = next((c for c in col_list if "Item" in c or "No" in c), col_list[1])
-                desc_col = next((c for c in col_list if "Description" in c or "Role" in c), col_list[2])
-                host_col = next((c for c in col_list if "Hostname" in c or "ID" in c or "Tag" in c), col_list[4])
-                ip_col = next((c for c in col_list if "IP" in c or "URL" in c), col_list[5])
-                os_col = next((c for c in col_list if "OS" in c or "Version" in c), col_list[6])
-
-                for _, row in inv_df.dropna(subset=[item_col]).iterrows():
-                    itm = str(row[item_col]).strip()
-                    if itm.replace('.0','').isdigit() or len(itm) <= 2:
-                        asset_rows.append([
-                            itm.replace('.0',''), str(row[desc_col]).strip(), str(row[host_col]).strip(), 
-                            str(row[ip_col]).strip().replace("\\n", " "), str(row[os_col]).strip()
-                        ])
-        except Exception: pass
-
-    total_high = op_sec_counts["High"] + cr_counts["High"]
-    total_med = op_sec_counts["Medium"] + cr_counts["Medium"]
-    total_low = op_sec_counts["Low"] + cr_counts["Low"]
-    total_aoi = op_sec_counts["AOI"] + cr_counts["AOI"]
+    # Flatten dictionaries into consolidated arrays
+    v_flattened = [[item["sys"], ", ".join(item["locations"]), item["name"], item["threat"], item["rating"], item["fix"]] for item in v_groups.values()]
+    a_flattened = [[item["sys"], ", ".join(item["locations"]), item["name"], item["threat"], item["rating"], item["fix"]] for item in a_groups.values()]
+    c_flattened = [[item["sys"], ", ".join(item["locations"]), item["name"], item["threat"], item["rating"], item["fix"]] for item in c_groups.values()]
 
     return {
-        "testee_name": testee_name, "testee_abbr": testee_abbr, "sys_name": sys_name, "sys_abbr": sys_abbr,
-        "company_name": company_name, "company_abbr": company_abbr, "op_sec": op_sec_counts, "cr": cr_counts,
-        "totals": {"High": total_high, "Medium": total_med, "Low": total_low, "AOI": total_aoi},
-        "grand_total": total_high + total_med + total_low + total_aoi, "vulnerability_rows": vulnerability_rows,
-        "penetration_rows": penetration_rows, "scope_paragraphs": scope_paragraphs, "objective_paragraphs": objective_paragraphs,
-        "system_description": system_description_text, "asset_rows": asset_rows, "security_requirements": security_requirements
+        "system_description": system_description_text,
+        "security_requirements": security_requirements,
+        "v_vulnerabilities": v_flattened,
+        "a_vulnerabilities": a_flattened,
+        "c_vulnerabilities": c_flattened,
+        "domain_matrix": domain_matrix,
+        "high": global_metrics["high"],
+        "medium": global_metrics["medium"],
+        "low": global_metrics["low"],
+        "aoi": global_metrics["aoi"]
     }
 
-def output_recreation_report(paths, data, filename):
-    doc = Document(paths["sra_template"])
-    risk_tier_string = f"{data['totals']['Medium']} Medium, {data['totals']['Low']} low risk and {data['totals']['AOI']} AOI items"
+def build_total_vulnerabilities_string(t):
+    parts = []
+    if t["high"] > 0: parts.append(f"{t['high']} high")
+    if t["medium"] > 0: parts.append(f"{t['medium']} medium")
+    if t["low"] > 0: parts.append(f"{t['low']} low risk")
+    if t["aoi"] > 0: parts.append(f"{t['aoi']} AOI")
+    
+    if not parts: return "no vulnerability"
+    if len(parts) == 1: return parts[0]
+    if len(parts) == 2: return f"{parts[0]} and {parts[1]}"
+    return ", ".join(parts[:-1]) + f", and {parts[-1]}"
+
+def generate_sra_report(telemetry, template_path, output_filename):
+    doc = Document(template_path)
+
+    total_vuln_str = build_total_vulnerabilities_string(telemetry)
+    grand_total_items_count = str(telemetry["high"] + telemetry["medium"] + telemetry["low"] + telemetry["aoi"])
 
     replacements = [
-        ("information system name (information system abbreviation)", f"{data['sys_name']} ({data['sys_abbr']})"),
-        ("*(INFORMATION SYSTEM ABBREVIATION)*", data["sys_abbr"]),
-        ("(INFORMATION SYSTEM ABBREVIATION)", data["sys_abbr"]),
-        ("information system name", data["sys_name"]),
-        ("SEMISSpW23", data["sys_abbr"]),
-        ("amount of total items identified", f"{data['grand_total']} items"),
-        ("amount of total items", f"{data['grand_total']} items"),
-        ("grand total items identified", risk_tier_string),
-        ("grand total items", risk_tier_string),
-        ("company name (company abbreviation)", f"{data['company_name']} ({data['company_abbr']})"),
-        ("company name", data["company_name"]),
-        ("company abbreviation", data["company_abbr"]),
-        ("COMPANY ABBREVIATION", data["company_abbr"]),
-        ("testee name (testee abbreviation)", f"{data['testee_name']} ({data['testee_abbr']})"),
-        ("testee abbreviation", data["testee_abbr"]),
-        ("testee name", data["testee_name"]),
-        ("*grand total items*", risk_tier_string)
+        ("*company name* Limited", company_name),
+        ("*company name*", company_name),
+        ("company name limited", company_name),
+        ("company name", company_name),
+        ("information system name (information system abbreviation)", f"{sys_name} ({sys_abbr})"),
+        ("*(INFORMATION SYSTEM ABBREVIATION)*", sys_abbr),
+        ("(INFORMATION SYSTEM ABBREVIATION)", sys_abbr),
+        ("INFORMATION SYSTEM ABBREVIATION", sys_abbr),
+        ("information system name", sys_name),
+        ("information system abbreviation", sys_abbr),
+        ("company name (company abbreviation)", f"{company_name} ({company_abbr})"),
+        ("company abbreviation", company_abbr),
+        ("COMPANY ABBREVIATION", company_abbr),
+        ("testee name (testee abbreviation)", f"{testee_name} ({testee_abbr})"),
+        ("testee abbreviation", testee_abbr),
+        ("TESTEE ABBREVIATION", testee_abbr),
+        ("testee name", testee_name),
+        ("*testee abbreviation*", testee_abbr),
+        ("May 2026", current_date_text),
+        ("June 2026", current_date_text),
+        ("*grand total items*", total_vuln_str),
+        ("*grand total items items*", total_vuln_str)
     ]
-
-    def update_cell_text_preserving_runs(cell, new_text, font_name="Times New Roman", size_pt=10, align_center=False):
-        if len(cell.paragraphs) == 0: cell.add_paragraph()
-        p = cell.paragraphs[0]
-        if align_center: p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        if len(p.runs) == 0: p.add_run(new_text)
-        else:
-            p.runs[0].text = new_text
-            for r in p.runs[1:]: r.text = ""
-        for paragraph in cell.paragraphs:
-            for run in paragraph.runs:
-                run.font.name = font_name
-                run.font.size = Pt(size_pt)
-                run.font.color.rgb = RGBColor(0, 0, 0)
-
-    def format_cell_text(cell, font_name="Times New Roman", size_pt=10, align_center=False, bold=False, color_rgb=None):
-        for paragraph in cell.paragraphs:
-            if align_center: paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            for run in paragraph.runs:
-                run.font.name = font_name
-                run.font.size = Pt(size_pt)
-                run.bold = bold
-                if color_rgb is not None: run.font.color.rgb = color_rgb
 
     def remove_asterisks_entirely(text):
         return text.replace("*", "").strip()
 
-    # Pass structural markers directly through inline conditional sweeps 
-    def replace_text_in_paragraph(p, lookup_tuples, current_index):
+    def replace_text_in_paragraph(p, lookup_tuples):
         full_text = "".join(run.text for run in p.runs)
-        lower_full = full_text.lower().replace(" ", "").replace("\\n", "")
+        if not full_text.strip(): return
         
-        # Immediate High-Priority Interception Rule: Force-inject into split line-wraps
-        if "reviewandinterview" in lower_full and "checklists" in lower_full:
-            full_text = f"Review and interview sessions to check the security compliance of information systems of {testee_abbr} using security checklists were conducted by {company_abbr}. The following security domains were covered in the security review:"
-            if p.runs:
-                p.runs[0].text = full_text
-                for r in p.runs[1:]: r.text = ""
-            else:
-                p.text = full_text
+        clean_stripped = full_text.strip()
+        if re.match(r'^\d+(\.\d+)*\s*', clean_stripped) or p.style.name.startswith("Heading"):
             return
-
-        # Core section methodology exclusion filter gate: Open permissions post Table 3 line layout bounds
-        if current_index < 125:
-            if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
-                return
 
         modified = False
         for k, val in lookup_tuples:
@@ -506,31 +478,39 @@ def output_recreation_report(paths, data, filename):
             if k.lower() in full_text.lower() or cleaned_key.lower() in full_text.lower():
                 pattern = re.compile(re.escape(k), re.IGNORECASE)
                 full_text = pattern.sub(val, full_text)
-                pattern_clean = re.compile(re.escape(cleaned_key), re.IGNORECASE)
-                full_text = pattern_clean.sub(val, full_text)
                 modified = True
                 
-        if modified or "*" in full_text:
+        if modified or ("*" in full_text):
             full_text = remove_asterisks_entirely(full_text)
             if p.runs:
                 p.runs[0].text = full_text
                 for r in p.runs[1:]: r.text = ""
-            else:
-                p.text = full_text
+            else: p.text = full_text
 
-    def insert_paragraph_after(paragraph, text, style=None):
-        new_p = doc.add_paragraph(style=style)
-        new_p.text = text
-        p_element = paragraph._p
-        p_element.addnext(new_p._p)
-        return new_p
+    # Section Headers & Footers traversal
+    for section in doc.sections:
+        for header_p in section.header.paragraphs:
+            replace_text_in_paragraph(header_p, replacements)
+        for footer_p in section.footer.paragraphs:
+            replace_text_in_paragraph(footer_p, replacements)
 
-    # Container Sweep Loop 1: Core Document Body Flow
+    body_elements = doc.element.body
+    tbl_index_map = {}
+    
+    current_tbl_count = 0
+    for child in body_elements:
+        if isinstance(child, CT_Tbl):
+            tbl_index_map[child] = current_tbl_count
+            current_tbl_count += 1
+
+    has_populated_section_8 = False
+
+    # Sweep Paragraph Matrix Nodes
     for p_idx, p in enumerate(list(doc.paragraphs)):
         full_p_text = "".join(run.text for run in p.runs)
         normalized_p_text = full_p_text.replace('\\n', ' ').strip()
+        lower_normalized = normalized_p_text.lower().replace(" ", "")
         
-        # Enforce target Month and Year layout overlay
         if p_idx < 15 and ("may 2026" in normalized_p_text.lower() or "june 2026" in normalized_p_text.lower()):
             p.text = current_date_text
             for run in p.runs:
@@ -538,151 +518,108 @@ def output_recreation_report(paths, data, filename):
                 run.font.size = Pt(12)
             continue
 
-        if 145 <= p_idx <= 165: continue
+        if "8.securityrequirements" in lower_normalized or re.match(r'^\d+(\.\d+)*\s*', normalized_p_text) or p.style.name.startswith("Heading"):
+            continue
 
-        if "copy from WAB, 4.1.1 Current Environment Description" in normalized_p_text or "copy from WAB, 9.1 System Description" in normalized_p_text:
-            p.text = data["system_description"]
-        elif "insert all under brief of work assignment under category b, 1. Scope of the services, 1.1" in normalized_p_text:
-            if len(data["scope_paragraphs"]) > 0:
-                p.text = data["scope_paragraphs"][0]
-                p.style = 'List Bullet'
+        if "copy from WAB section 4.4".replace(" ", "") in lower_normalized or "copy from WAB section 4.1.3".replace(" ", "") in lower_normalized:
+            if not has_populated_section_8:
+                has_populated_section_8 = True
+                p.text = ""  
                 current_anchor = p
-                for msg in data["scope_paragraphs"][1:]:
-                    current_anchor = insert_paragraph_after(current_anchor, msg, style='List Bullet')
-            else: p.text = ""
-        elif "copy from work assignment under category b, all under 3. Project objectives" in normalized_p_text:
-            if len(data["objective_paragraphs"]) > 0:
-                p.text = data["objective_paragraphs"][0]
-                p.style = 'List Bullet'
-                current_anchor = p
-                for msg in data["objective_paragraphs"][1:]:
-                    current_anchor = insert_paragraph_after(current_anchor, msg, style='List Bullet')
-            else: p.text = ""
-        elif "copy from WAB section 4.4" in normalized_p_text:
-            p.text = f"{data['company_abbr']} referred to the following documents in conducting the security risk assessment:"
-            current_anchor = p
-            for msg in data["security_requirements"]:
-                current_anchor = insert_paragraph_after(current_anchor, msg, style='List Bullet')
-        elif "copy from follow up plan" in normalized_p_text.lower() or "copy from this document table" in normalized_p_text.lower():
-            p.text = ""
+                if len(telemetry["security_requirements"]) > 0:
+                    for msg in telemetry["security_requirements"]:
+                        current_anchor = insert_paragraph_after(current_anchor, msg, style='List Bullet')
+                else:
+                    explicit_9_points = [
+                        "Baseline IT Security Policy;", "IT Security Guidelines;", "Practice Guide for Security Risk Assessment & Audit;",
+                        "Practice Guide for Information Security Incident Handling;", "Practice Guide for Penetration Testing;", 
+                        "Practice Guide for Website and Web Application Security;", "Practice Guide for Cloud Computing Security;", 
+                        "Practice Guide for Mobile Security;", "Practice Guide for Internet of Things Security"
+                    ]
+                    for item in explicit_9_points:
+                        current_anchor = insert_paragraph_after(current_anchor, item, style='List Bullet')
+            else:
+                p.text = ""
+        elif "copy from WAB, 4.1.1 Current Environment Description" in normalized_p_text or "copy from WAB, 9.1 System Description" in normalized_p_text:
+            p.text = telemetry["system_description"]
+        elif "copy from follow up plan" in normalized_p_text:
+            if "v numbered rows" in normalized_p_text.lower(): target_source = telemetry["v_vulnerabilities"]
+            elif "a numbered rows" in normalized_p_text.lower(): target_source = telemetry["a_vulnerabilities"]
+            else: target_source = telemetry["c_vulnerabilities"]
+            
+            p_element = p._p
+            current_node = p_element.getnext()
+            while current_node is not None and not isinstance(current_node, CT_Tbl):
+                current_node = current_node.getnext()
+                
+            if current_node is not None and current_node in tbl_index_map:
+                target_table_idx = tbl_index_map[current_node]
+                target_table = doc.tables[target_table_idx]
+                
+                for row_item in target_source:
+                    new_row = target_table.add_row()
+                    for cell_idx, val in enumerate(row_item):
+                        if cell_idx < len(new_row.cells):
+                            apply_text_styling_and_borders(new_row.cells[cell_idx], str(val))
+            p.text = "" 
         else:
-            replace_text_in_paragraph(p, replacements, p_idx)
+            replace_text_in_paragraph(p, replacements)
 
-    # Container Sweep Loop 2: Section Margin Headers & Footers
-    for section in doc.sections:
-        for header_p in section.header.paragraphs:
-            replace_text_in_paragraph(header_p, replacements, 999)
-        for footer_p in section.footer.paragraphs:
-            replace_text_in_paragraph(footer_p, replacements, 999)
+    # Overwrite the 14-domain summary matrix sheets cleanly across Section 1.1 and Section 10 tables
+    domain_mapping_keys = [
+        ("managementrespons", "management"),
+        ("itsecuritypolic", "policy"),
+        ("humanresource", "human"),
+        ("assetmanag", "asset"),
+        ("accesscontrol", "access"),
+        ("cryptograph", "crypto"),
+        ("physical", "physical"),
+        ("operation", "operations"),
+        ("communication", "communications"),
+        ("systemacquisition", "development"),
+        ("outsourcing", "outsourcing"),
+        ("incident", "incident"),
+        ("businesscontinuity", "continuity"),
+        ("compliance", "compliance")
+    ]
 
-    vulnerability_table_count = 0
-
-    # Container Sweep Loop 3: Grid Cells Matrix and Embedded Objects
-    for table_idx, table in enumerate(doc.tables):
+    for table in doc.tables:
         if len(table.rows) == 0 or len(table.rows[0].cells) == 0: continue
         
         for row in table.rows:
+            row_header_clean = row.cells[0].text.lower().replace(" ", "").replace(",", "").replace("-", "")
+            
+            # Double-pass checker maps rows based on standard security fields
+            matched_domain_id = None
+            for lookup_prefix, internal_id in domain_mapping_keys:
+                if lookup_prefix in row_header_clean:
+                    matched_domain_id = internal_id
+                    break
+                    
+            if matched_domain_id and len(row.cells) >= 5:
+                counts_map = telemetry["domain_matrix"][matched_domain_id]
+                apply_text_styling_and_borders(row.cells[1], str(counts_map["high"]), center=True)
+                apply_text_styling_and_borders(row.cells[2], str(counts_map["medium"]), center=True)
+                apply_text_styling_and_borders(row.cells[3], str(counts_map["low"]), center=True)
+                apply_text_styling_and_borders(row.cells[4], str(counts_map["aoi"]), center=True)
+                continue
+                
+            if "grandtotal" in row_header_clean and len(row.cells) >= 5:
+                apply_text_styling_and_borders(row.cells[1], str(telemetry["high"]), center=True)
+                apply_text_styling_and_borders(row.cells[2], str(telemetry["medium"]), center=True)
+                apply_text_styling_and_borders(row.cells[3], str(telemetry["low"]), center=True)
+                apply_text_styling_and_borders(row.cells[4], str(telemetry["aoi"]), center=True)
+                continue
+
             for cell in row.cells:
                 for cell_p in cell.paragraphs:
-                    replace_text_in_paragraph(cell_p, replacements, 999)
+                    replace_text_in_paragraph(cell_p, replacements)
 
-        if table_idx in [3, 4, 5, 6, 7]: continue
+    doc.save(output_filename)
+    print("SRA Report compiled and built successfully.")
 
-        # Dynamic Sign-Off Table Sync (Table 0)
-        if table_idx == 0:
-            try:
-                table.cell(0, 0).text = "Version 0.1"
-                table.cell(1, 0).text = "Role"; table.cell(1, 1).text = "Name"; table.cell(1, 2).text = "Action"; table.cell(1, 3).text = "Date"
-                table.cell(2, 0).text = "Created by"; table.cell(2, 1).text = f"{data['company_name']}"; table.cell(2, 2).text = "Document Revision"; table.cell(2, 3).text = current_date_numeric
-                table.cell(3, 0).text = "Approved by"; table.cell(3, 1).text = ""; table.cell(3, 2).text = "Document Approval"; table.cell(3, 3).text = ""                 
-            except Exception: pass
-
-        # Dynamic Change Control Table Sync (Table 1)
-        elif table_idx == 1:
-            try:
-                table.cell(0, 0).text = "Version"; table.cell(0, 1).text = "Date"; table.cell(0, 2).text = "Author"; table.cell(0, 3).text = "Summary of Changes"
-                table.cell(1, 0).text = "0.1"; table.cell(1, 1).text = current_date_numeric; table.cell(1, 2).text = f"{data['company_name']}"; table.cell(1, 3).text = "Document Creation"
-            except Exception: pass
-
-        # Structural Risk Aggregator Styling Target Zone
-        elif table_idx in [2, 10]:
-            for row in table.rows:
-                lbl = row.cells[0].text.lower()
-                if "operations security" in lbl or "1.1 risks assessed" in lbl:
-                    update_cell_text_preserving_runs(row.cells[0], "Operations Security", font_name="Times New Roman", size_pt=10, align_center=False)
-                    update_cell_text_preserving_runs(row.cells[1], str(data["op_sec"]["High"]), font_name="Times New Roman", size_pt=10, align_center=True)
-                    update_cell_text_preserving_runs(row.cells[2], str(data["op_sec"]["Medium"]), font_name="Times New Roman", size_pt=10, align_center=True)
-                    update_cell_text_preserving_runs(row.cells[3], str(data["op_sec"]["Low"]), font_name="Times New Roman", size_pt=10, align_center=True)
-                    update_cell_text_preserving_runs(row.cells[4], str(data["op_sec"]["AOI"]), font_name="Times New Roman", size_pt=10, align_center=True)
-                elif "grand total" in lbl:
-                    update_cell_text_preserving_runs(row.cells[0], "Grand Total", font_name="Times New Roman", size_pt=10, align_center=False)
-                    update_cell_text_preserving_runs(row.cells[1], str(data["totals"]["High"]), font_name="Times New Roman", size_pt=10, align_center=True)
-                    update_cell_text_preserving_runs(row.cells[2], str(data["totals"]["Medium"]), font_name="Times New Roman", size_pt=10, align_center=True)
-                    update_cell_text_preserving_runs(row.cells[3], str(data["totals"]["Low"]), font_name="Times New Roman", size_pt=10, align_center=True)
-                    update_cell_text_preserving_runs(row.cells[4], str(data["totals"]["AOI"]), font_name="Times New Roman", size_pt=10, align_center=True)
-            
-            for r_idx, row in enumerate(table.rows):
-                for c_idx, cell in enumerate(row.cells):
-                    apply_border(cell, color="4472c4", size="4", thick=False)
-                    for cp in cell.paragraphs:
-                        for crun in cp.runs:
-                            crun.font.name = "Times New Roman"
-                            crun.font.size = Pt(10)
-
-        elif table_idx in [11, 12]:
-            for row in list(table.rows):
-                cell_text_clean = row.cells[0].text.lower()
-                if "copy from follow up plan" in cell_text_clean or "rows" in cell_text_clean:
-                    table._element.remove(row._element)
-
-            if vulnerability_table_count == 0:
-                target_dataset = data["vulnerability_rows"]
-                vulnerability_table_count += 1
-            else: target_dataset = data["penetration_rows"]
-            
-            for row_data in target_dataset:
-                r_cells = table.add_row().cells
-                for i, val in enumerate(row_data): r_cells[i].text = val
-
-            for r_idx, row in enumerate(table.rows):
-                for c_idx, cell in enumerate(row.cells):
-                    apply_border(cell, color="000000", size="4", thick=False)
-                    if r_idx > 0:
-                        center_flag = (c_idx in [3, 4])
-                        format_cell_text(cell, font_name="Times New Roman", size_pt=9, align_center=center_flag)
-
-        else:
-            if "role description" in table.rows[0].cells[1].text.lower() and len(data["asset_rows"]) > 0:
-                table.cell(0, 0).text = "Item"; table.cell(0, 1).text = "Asset Description"; table.cell(0, 2).text = "Hostname / ID"; table.cell(0, 3).text = "IP Address / URL"; table.cell(0, 4).text = "OS Version"
-                for asset_row in data["asset_rows"]:
-                    r_cells = table.add_row().cells
-                    for i, val in enumerate(asset_row): r_cells[i].text = val
-
-            for row in table.rows:
-                for cell in row.cells:
-                    apply_border(cell, color="000000", size="4", thick=False)
-
-    doc.save(filename)
-    print("Compilation complete. Output streaming verified.")
-
-def apply_border(cell, color="000000", size="4", thick=False):
-    from docx.oxml import parse_xml
-    from docx.oxml.ns import nsdecls
-    tcPr = cell._element.get_or_add_tcPr()
-    border_val = "thick" if thick else "single"
-    tcBorders_xml = (
-        f'<w:tcBorders {nsdecls("w")}>\\n'
-        f'  <w:top w:val="{border_val}" w:sz="{size}" w:color="{color}"/>\\n'
-        f'  <w:left w:val="{border_val}" w:sz="{size}" w:color="{color}"/>\\n'
-        f'  <w:bottom w:val="{border_val}" w:sz="{size}" w:color="{color}"/>\\n'
-        f'  <w:right w:val="{border_val}" w:sz="{size}" w:color="{color}"/>\\n'
-        f'</w:tcBorders>'
-    )
-    tcPr.append(parse_xml(tcBorders_xml))
-
-paths = identify_data_sources()
-telemetry = process_dynamic_telemetry(paths)
-output_recreation_report(paths, telemetry, "Generated_SRA_Report_Final.docx")
+telemetry = process_dynamic_telemetry(JS_WAB_NAME, JS_PLAN_NAME)
+generate_sra_report(telemetry, "new_SRA_report_template.docx", "Generated_SRA_Report_Final.docx")
 `;
 
             try {
@@ -696,7 +633,7 @@ output_recreation_report(paths, telemetry, "Generated_SRA_Report_Final.docx")
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
-                logToConsole("Report compiled and generated successfully!");
+                logToConsole("SRA Report generated and downloaded successfully!");
             } catch (err) {
                 logToConsole("Execution Error: " + err.message);
             }
