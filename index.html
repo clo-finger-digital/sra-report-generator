@@ -153,7 +153,6 @@
                 return;
             }
 
-            // Optional raw logic text logs attachments
             const vaFile = await fetchFileBytes("file_va");
             const ptFile = await fetchFileBytes("file_pt");
             const crFile = await fetchFileBytes("file_cr");
@@ -247,7 +246,7 @@ for p in wab_doc.paragraphs:
     if not txt: continue
     
     normalized_txt = txt.replace('\\xa0', ' ').strip()
-    # Upgraded Global Safe Match: Regex targets any sequence of layout whitespaces, breaks, or literal hidden tab vectors
+    # ROBUST whitespace normalizer: strips all space variants, raw breaks, and structural hidden tab characters (\\t)
     lower_clean = re.sub(r'\\s+', '', normalized_txt.lower()).replace(",", "").replace(":", "")
     
     # Structural Section Boundaries Evaluation Blocks
