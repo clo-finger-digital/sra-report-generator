@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Security Risk Assessment (SRA) Report Generator Pipeline</title>
+    <title>SRA Report Automation Pipeline</title>
     <!-- Tailwind CSS for modern responsive styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Pyodide Core Engine for Serverless Client-Side Python Runtime -->
@@ -12,14 +12,14 @@
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased">
     <div class="max-w-4xl mx-auto px-4 py-12">
         <header class="border-b border-slate-800 pb-6 mb-8">
-            <h1 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">Security Risk Assessment (SRA) Automation Pipeline</h1>
-            <p class="mt-2 text-sm text-slate-400">Dynamically extract Scope, Objectives, and Security Baseline documents straight from the WAB into the clean SRA report with auto-updating dates</p>
+            <h1 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">SRA Report Automation Pipeline</h1>
+            <p class="mt-2 text-sm text-slate-400">Dynamically extract Scope, Objectives, and Baseline guidelines straight from the WAB alongside custom tool logs into a compiled SRA report</p>
         </header>
 
         <main class="space-y-6">
-            <!-- INJECTOR ENVIRONMENT VARIABLES -->
+            <!-- ENVIRONMENT VARIABLES OVERRIDES -->
             <section class="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-xl space-y-4">
-                <h2 class="text-xl font-bold text-white mb-4">SRA Report Configuration Mappings</h2>
+                <h2 class="text-xl font-bold text-white mb-4">SRA Document Metadata Mappings</h2>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -49,15 +49,34 @@
                 </div>
             </section>
 
-            <!-- SPECIFICATION SOURCE FILE UPLOAD -->
+            <!-- MULTI-SOURCE INGESTION CHANNELS -->
             <section class="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-xl space-y-4">
-                <h2 class="text-xl font-bold text-white mb-2">Source Brief File Ingestion</h2>
-                <p class="text-xs text-slate-400 mb-4">Ensure your clean target template layout file is uploaded to your GitHub Pages repository folder path matching exactly <code class="text-blue-400">SRA template.docx</code>.</p>
+                <h2 class="text-xl font-bold text-white mb-4">Pipeline Ingestion Channels</h2>
                 
                 <div class="space-y-4">
-                    <div class="p-4 bg-slate-950 border border-dashed border-blue-500/50 rounded-lg">
-                        <label class="block text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">Work Assignment Brief Document WAB (.docx)</label>
-                        <input type="file" id="file_wab" accept=".docx" class="block w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-900/50 file:text-blue-200 hover:file:bg-blue-800 cursor-pointer">
+                    <div class="p-4 bg-slate-950 border border-slate-800 rounded-lg">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Work Assignment Brief (.docx)</label>
+                        <input type="file" id="file_wab" accept=".docx" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-300 hover:file:bg-slate-700 cursor-pointer">
+                    </div>
+
+                    <div class="p-4 bg-slate-950 border border-slate-800 rounded-lg">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Nessus Vulnerability Scan Log (.txt)</label>
+                        <input type="file" id="file_va" accept=".txt" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-300 hover:file:bg-slate-700 cursor-pointer">
+                    </div>
+
+                    <div class="p-4 bg-slate-950 border border-slate-800 rounded-lg">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">OWASP ZAP Penetration Testing Log (.txt)</label>
+                        <input type="file" id="file_pt" accept=".txt" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-300 hover:file:bg-slate-700 cursor-pointer">
+                    </div>
+
+                    <div class="p-4 bg-slate-950 border border-slate-800 rounded-lg">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Bearer Source Code Review Log (.txt)</label>
+                        <input type="file" id="file_cr" accept=".txt" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-300 hover:file:bg-slate-700 cursor-pointer">
+                    </div>
+
+                    <div class="p-4 bg-slate-950 border border-slate-800 rounded-lg">
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Follow-Up Action Plan Milestones (.txt)</label>
+                        <input type="file" id="file_fup" accept=".txt" class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-slate-300 hover:file:bg-slate-700 cursor-pointer">
                     </div>
                 </div>
 
@@ -112,7 +131,7 @@
 
         async function fetchFileBytes(elementId) {
             const el = document.getElementById(elementId);
-            if (!el.files || el.files.length === 0) return null;
+            if (!el.files || el.files.length === 0) return { name: "", data: new Uint8Array(0) };
             const file = el.files[0];
             const buffer = await file.arrayBuffer();
             return { name: file.name, data: new Uint8Array(buffer) };
@@ -129,10 +148,16 @@
             const tAbbr = document.getElementById("testee_abbr").value;
 
             const wabFile = await fetchFileBytes("file_wab");
-            if (!wabFile) {
+            if (!wabFile.name) {
                 alert("Please submit the required Work Assignment Brief (WAB) file to begin extraction.");
                 return;
             }
+
+            // Optional raw logic text logs attachments
+            const vaFile = await fetchFileBytes("file_va");
+            const ptFile = await fetchFileBytes("file_pt");
+            const crFile = await fetchFileBytes("file_cr");
+            const fupFile = await fetchFileBytes("file_fup");
 
             const repoBasePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
             const templateTargetUrl = `${window.location.origin}${repoBasePath}SRA template.docx`;
@@ -151,8 +176,11 @@
                 return;
             }
 
-            try { pyodideInstance.FS.unlink(wabFile.name); } catch(e) {}
             pyodideInstance.FS.writeFile(wabFile.name, wabFile.data);
+            if(vaFile.name) pyodideInstance.FS.writeFile(vaFile.name, vaFile.data);
+            if(ptFile.name) pyodideInstance.FS.writeFile(ptFile.name, ptFile.data);
+            if(crFile.name) pyodideInstance.FS.writeFile(crFile.name, crFile.data);
+            if(fupFile.name) pyodideInstance.FS.writeFile(fupFile.name, fupFile.data);
 
             pyodideInstance.globals.set("JS_COMPANY_NAME", cName);
             pyodideInstance.globals.set("JS_COMPANY_ABBREVIATION", cAbbr);
@@ -161,6 +189,10 @@
             pyodideInstance.globals.set("JS_TESTEE_NAME", tName);
             pyodideInstance.globals.set("JS_TESTEE_ABBREVIATION", tAbbr);
             pyodideInstance.globals.set("JS_WAB_NAME", wabFile.name);
+            pyodideInstance.globals.set("JS_VA_NAME", vaFile.name);
+            pyodideInstance.globals.set("JS_PT_NAME", ptFile.name);
+            pyodideInstance.globals.set("JS_CR_NAME", crFile.name);
+            pyodideInstance.globals.set("JS_FUP_NAME", fupFile.name);
 
             const pythonScript = `
 import os
@@ -215,7 +247,7 @@ for p in wab_doc.paragraphs:
     if not txt: continue
     
     normalized_txt = txt.replace('\\xa0', ' ').strip()
-    # Robust Fix: Use regex to strip away standard spaces, trailing breaks, and literal hidden tabs (\\t)
+    # Upgraded Global Safe Match: Regex targets any sequence of layout whitespaces, breaks, or literal hidden tab vectors
     lower_clean = re.sub(r'\\s+', '', normalized_txt.lower()).replace(",", "").replace(":", "")
     
     # Structural Section Boundaries Evaluation Blocks
@@ -266,6 +298,21 @@ for p in wab_doc.paragraphs:
             if cleaned_bullet and cleaned_bullet not in security_requirements: 
                 security_requirements.append(cleaned_bullet)
 
+# Read explicit raw text logs logic if attached by the pipeline engineer
+va_custom_content = ""
+pt_custom_content = ""
+cr_custom_content = ""
+fup_custom_content = ""
+
+if JS_VA_NAME:
+    with open(JS_VA_NAME, 'r', encoding='utf-8', errors='ignore') as f: va_custom_content = f.read()
+if JS_PT_NAME:
+    with open(JS_PT_NAME, 'r', encoding='utf-8', errors='ignore') as f: pt_custom_content = f.read()
+if JS_CR_NAME:
+    with open(JS_CR_NAME, 'r', encoding='utf-8', errors='ignore') as f: cr_custom_content = f.read()
+if JS_FUP_NAME:
+    with open(JS_FUP_NAME, 'r', encoding='utf-8', errors='ignore') as f: fup_custom_content = f.read()
+
 def insert_paragraph_after(paragraph, text, style=None):
     doc_instance = paragraph.part.document
     new_p = doc_instance.add_paragraph(style=style)
@@ -315,7 +362,6 @@ replacements = [
     ("COMPANY ABBREVIATION", company_abbr)
 ]
 
-# Automated Regex-Driven Calendar Transformer Engine with explicit Style Lock Caching Pass
 def process_token_replacements(p, lookup_tuples):
     full_text = "".join(run.text for run in p.runs)
     if not full_text.strip(): return
@@ -352,7 +398,7 @@ def process_token_replacements(p, lookup_tuples):
             
     if modified:
         if p.runs:
-            # Cache critical formatting properties from the baseline run
+            # SRA Standard: Overwrite the first run's text
             base_run = p.runs[0]
             cached_size = base_run.font.size
             cached_name = base_run.font.name
@@ -360,7 +406,6 @@ def process_token_replacements(p, lookup_tuples):
             cached_italic = base_run.italic
             cached_color = base_run.font.color.rgb if base_run.font.color else None
 
-            # Overwrite the base run cleanly
             base_run.text = full_text
             
             # Re-enforce layout metrics to counteract python-docx formatting drops
