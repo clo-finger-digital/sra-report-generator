@@ -365,9 +365,16 @@ security_requirements = []
 assessment_scope_text = []
 assessment_objective_text = []
 
-print("Extracting verified structural boundaries from WAB document processing context...")
+print("Extracting structural boundaries from WAB document processing context...")
 wab_doc = Document(JS_WAB_NAME)
 state = "SEEKING"
+
+STOP_TRIGGERS = [
+    "projectdeliverables", 
+    "wherenecessary", 
+    "acceptancecriteria", 
+    "referencedocumentation"
+]
 
 for p in wab_doc.paragraphs:
     txt = p.text.strip()
@@ -398,8 +405,12 @@ for p in wab_doc.paragraphs:
     if "governmentstandards" in lower_clean and "methodologies" in lower_clean:
         state = "CAPTURING_REQUIREMENTS"
         continue
-    elif state == "CAPTURING_REQUIREMENTS" and lower_clean.startswith("wherenecessary"):
-        state = "SEEKING"
+
+    # Structural Stop Sequence for Section 8 Extraction Block
+    if state == "CAPTURING_REQUIREMENTS":
+        if any(trigger in lower_clean for trigger in STOP_TRIGGERS):
+            state = "SEEKING"
+            continue
 
     # Capture extraction processing branches
     if state == "CAPTURING_DESC":
@@ -414,7 +425,8 @@ for p in wab_doc.paragraphs:
             assessment_objective_text.append(normalized_txt)
     elif state == "CAPTURING_REQUIREMENTS":
         if "governmentstandards" not in lower_clean and "thecontractorshallcomply" not in lower_clean:
-            cleaned_bullet = re.sub(r'^([ivxLCDM\\d\\a-z\\)\\(\\.\\s]+)[\\)\\.]\\s*', '', normalized_txt).strip()
+            # Strip standard list bullet characters cleanly
+            cleaned_bullet = re.sub(r'^([ivxLCDM\\d\\a-z\\)\\(\\.\\s*-]+)[\\)\\.]?\\s*', '', normalized_txt).strip()
             if cleaned_bullet and cleaned_bullet not in security_requirements: 
                 security_requirements.append(cleaned_bullet)
 
@@ -477,7 +489,6 @@ has_populated_section_8 = False
 for p_idx, p in enumerate(list(doc.paragraphs)):
     lower_normalized = p.text.lower().replace(" ", "").replace(",", "")
     
-    # Global Scrubbing Phase for Specific Pointer and Bracket Placeholders
     if "copy from this document table from 1.1 risks assessed" in p.text.lower():
         p.text = ""
         continue
@@ -491,7 +502,6 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
 
     if "8.securityrequirements" in lower_normalized or p.style.name.startswith("Heading"): continue
 
-    # Dynamic Assessment Scope Stream Overwrites
     if "insertallunderbriefofworkassignmentundercategoryb1.scopeoftheservices1.1" in lower_normalized or "copyfromwab1.1scope" in lower_normalized:
         p.text = ""
         current_anchor = p
@@ -501,7 +511,6 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
         else:
             p.text = "The scope of the services covers the security areas specified in S17 and G3 guidelines."
 
-    # Dynamic Assessment Objective Stream Overwrites
     elif "copyfromworkassignmentundercategoryballunder3.projectobjectives" in lower_normalized or "copyfromwab3.projectobjectives" in lower_normalized:
         p.text = ""
         current_anchor = p
@@ -511,7 +520,6 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
         else:
             p.text = "To evaluate security risks and verify regulatory baseline compliance."
 
-    # Dynamic Security Requirements Stream Overwrites
     elif "copyfromwabsection4.4" in lower_normalized or "copyfromwabsection4.1.3" in lower_normalized:
         if not has_populated_section_8:
             has_populated_section_8 = True
@@ -525,7 +533,6 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
     elif "copy from WAB, 4.1.1 Current Environment Description" in p.text or "copy from WAB, 9.1 System Description" in p.text:
         p.text = system_description_text
         
-    # Strict Finding Table Injections Block
     elif "copy from follow up plan" in p.text or "copy from code review" in p.text:
         if "v numbered" in p.text.lower(): target_source = v_vulnerabilities
         elif "a numbered" in p.text.lower(): target_source = a_vulnerabilities
@@ -546,7 +553,6 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
     else:
         run_replace_mechanism(p, replacements)
 
-# Calculate Summary Matrices across Domain Blocks
 for table in doc.tables:
     if len(table.rows) == 0 or len(table.rows[0].cells) == 0: continue
     first_row_text = "".join(cell.text.lower() for cell in table.rows[0].cells)
