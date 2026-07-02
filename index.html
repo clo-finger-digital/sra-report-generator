@@ -13,7 +13,7 @@
     <div class="max-w-4xl mx-auto px-4 py-12">
         <header class="border-b border-slate-800 pb-6 mb-8">
             <h1 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">SRA Pipeline Hub</h1>
-            <p class="mt-2 text-sm text-slate-400">Compile mandatory WAB Briefs, Vulnerability Plans, and Code Review logs into structured SRA Reports directly via GitHub Pages</p>
+            <p class="mt-2 text-sm text-slate-400">Compile mandatory WAB Briefs, multi-sheet Vulnerability Plans, and Code Review logs into clean SRA Reports via GitHub Pages</p>
         </header>
 
         <main class="space-y-6">
@@ -52,7 +52,7 @@
             <!-- MANDATORY DATA SOURCE FILE UPLOADS -->
             <section class="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-xl space-y-4">
                 <h2 class="text-xl font-bold text-white mb-2">Mandatory Source Submissions</h2>
-                <p class="text-xs text-slate-400 mb-4">Note: The target template file is pulled directly from the site's repository tree directory (<code class="text-blue-400">./new SRA report template.docx</code>).</p>
+                <p class="text-xs text-slate-400 mb-4">Note: The base template file must be placed in your repository root folder named exactly <code class="text-blue-400">new SRA report template.docx</code>.</p>
                 
                 <div class="space-y-4">
                     <div class="p-4 bg-slate-950 border border-dashed border-blue-500/50 rounded-lg">
@@ -92,7 +92,7 @@
                 logToConsole("Loading Pyodide WebAssembly Core Engine Architecture...");
                 pyodideModule = await loadPyodide();
                 
-                logToConsole("Configuring package distribution runtime bootstrap manager (micropip)...");
+                logToConsole("Configuring package distribution bootstrap manager (micropip)...");
                 await pyodideModule.loadPackage(["micropip", "pandas"]);
                 
                 logToConsole("Auto-installing file pipeline packages (openpyxl, python-docx)...");
@@ -145,7 +145,7 @@
             const codeFile = await getFileBytes("file_codereview");
 
             if (!wabFile || !planFile || !codeFile) {
-                logToConsole("Validation Failed: Compile aborted. WAB, Follow Up Plan, and Code Review logs are all strictly required.");
+                logToConsole("Validation Failed: Compile aborted. WAB, Follow Up Plan, and Code Review sheets are all strictly required.");
                 alert("Please submit all three mandatory files to run generation.");
                 return;
             }
@@ -161,7 +161,7 @@
 
             logToConsole(`Date Sync: Active generation timestamp set to ${computedDateText}`);
 
-            logToConsole("Fetching base layout SRA template file from GitHub branch route...");
+            logToConsole("Fetching 'new SRA report template.docx' via repository root route branch...");
             try {
                 const response = await fetch("./new%20SRA%20report%20template.docx");
                 if (!response.ok) throw new Error("Template access error 404. Check that 'new SRA report template.docx' is tracked in repository root branch.");
@@ -239,7 +239,7 @@ def normalize_domain_key(text):
     if "physical" in t: return "physical"
     if "operation" in t: return "operations"
     if "communication" in t: return "communications"
-    if "systemacquisition" in t or "developmentandmaintenance" in t: return "development"
+    if "systemacquisition" in t or "developmentandmaintenance" in t or "systemdevelopment" in t: return "development"
     if "outsourcing" in t: return "outsourcing"
     if "incident" in t: return "incident"
     if "businesscontinuity" in t or "aspectsofbc" in t: return "continuity"
@@ -276,15 +276,15 @@ def insert_paragraph_after(paragraph, text, style=None):
     p_element.addnext(new_p._p)
     return new_p
 
-def parse_excel_followup_source(xlsx_path, prefix_filter, global_metrics, domain_matrix):
+def parse_excel_followup_source(xlsx_path, prefix_filter, global_metrics, domain_matrix, forced_domain_id=None):
     groups = {}
     wb = load_workbook(xlsx_path, data_only=True)
     
-    # SYSTEM UPGRADE: Loop across ALL worksheets for comprehensive multi-sheet aggregation
-    sheets_to_process = wb.sheetnames
+    # Process multi-sheet iterations for the code review logs
+    sheets_to_process = wb.sheetnames if prefix_filter == "C" else [wb.active.title]
     
-    for s_name in sheets_to_process:
-        sheet = wb[s_name]
+    for sheet_name in sheets_to_process:
+        sheet = wb[sheet_name]
         for row_idx, row in enumerate(sheet.iter_rows(values_only=True)):
             if row_idx < 2 or row[2] is None: continue
             obs_num = str(row[2]).strip().upper()
@@ -304,12 +304,7 @@ def parse_excel_followup_source(xlsx_path, prefix_filter, global_metrics, domain
             threat_desc = str(row[9]).strip() if row[9] is not None else ""  
             reremediation = str(row[10]).strip() if row[10] is not None else "" 
             severity = str(row[11]).strip() if row[11] is not None else "Low" 
-            
-            # CORE MATRIX INTEGRATION: Force code reviews under Dev domain, route others dynamically via cell strings
-            if prefix_filter == "C":
-                raw_domain = "System Acquisition, Development and Maintenance"
-            else:
-                raw_domain = str(row[5]).strip() if (len(row) > 5 and row[5] is not None) else "Operations Security"
+            raw_domain = str(row[5]).strip() if (len(row) > 5 and row[5] is not None) else "Compliance"
             
             sev_title = severity.strip().title()
             if "aoi" in severity.lower(): sev_title = "AOI"
@@ -340,7 +335,7 @@ def parse_excel_followup_source(xlsx_path, prefix_filter, global_metrics, domain
             if sev_key in global_metrics:
                 global_metrics[sev_key] += 1
             
-            dom_mapped_key = normalize_domain_key(raw_domain)
+            dom_mapped_key = forced_domain_id if forced_domain_id else normalize_domain_key(raw_domain)
             if sev_key in domain_matrix[dom_mapped_key]:
                 domain_matrix[dom_mapped_key][sev_key] += 1
                 
@@ -348,9 +343,9 @@ def parse_excel_followup_source(xlsx_path, prefix_filter, global_metrics, domain
 
 def build_total_vulnerabilities_string(high, medium, low, aoi):
     parts = []
-    if high > 0: parts.append(f"{high} High")
-    if medium > 0: parts.append(f"{medium} Medium")
-    if low > 0: parts.append(f"{low} Low Risk")
+    if high > 0: parts.append(f"{high} high")
+    if medium > 0: parts.append(f"{medium} medium")
+    if low > 0: parts.append(f"{low} low risk")
     if aoi > 0: parts.append(f"{aoi} AOI")
     
     if not parts: return "no vulnerability"
@@ -365,12 +360,12 @@ domain_matrix = {k: {"high": 0, "medium": 0, "low": 0, "aoi": 0} for k in [
     "operations", "communications", "development", "outsourcing", "incident", "continuity", "compliance"
 ]}
 
-print("Parsing Infrastructure and Vulnerabilities Follow-Up Plan log rows...")
+print("Parsing Infrastructure and Vulnerabilities Follow-Up Plan logs...")
 v_vulnerabilities = parse_excel_followup_source(JS_PLAN_NAME, "V", global_metrics, domain_matrix)
 a_vulnerabilities = parse_excel_followup_source(JS_PLAN_NAME, "A", global_metrics, domain_matrix)
 
-print("Parsing Source Code Review log components across all subsystem tabs...")
-c_vulnerabilities = parse_excel_followup_source(JS_CODE_NAME, "C", global_metrics, domain_matrix)
+print("Parsing Source Code Review logs across all available sheet tabs...")
+c_vulnerabilities = parse_excel_followup_source(JS_CODE_NAME, "C", global_metrics, domain_matrix, forced_domain_id="development")
 
 system_description_text = ""
 security_requirements = []
@@ -408,7 +403,7 @@ for p in wab_doc.paragraphs:
         capture_objective = False
         capture_req = False
         continue
-    elif capture_scope and ("background" in lower_clean or "projectobjectives" in lower_clean or "1.2" in lower_clean or "3.project" in lower_clean):
+    elif capture_scope and normalized_txt.lower().startswith("the scope of the services"):
         capture_scope = False
 
     if capture_scope:
@@ -430,17 +425,17 @@ for p in wab_doc.paragraphs:
             assessment_objective_text.append(normalized_txt)
         continue
 
-    # --- State 4: Security Baseline Requirements ---
-    if "form" in lower_clean and "securitybaseline" in lower_clean:
+    # --- State 4: Security Baseline Requirements Anchor Range ---
+    if "thecontractor" in lower_clean and "qualityrequirements" in lower_clean:
         capture_req = True
         capture_scope = False
         capture_objective = False
         continue
-    elif capture_req and "gather" in lower_clean:
+    elif capture_req and normalized_txt.lower().startswith("where necessary"):
         capture_req = False
 
     if capture_req:
-        if "baseline" not in lower_clean and "form" not in lower_clean:
+        if "baseline" not in lower_clean and "contractor" not in lower_clean:
             cleaned_bullet = re.sub(r'^([ivxLCDM\\d\\a-z\\)\\(\\.\\s]+)[\\)\\.]\\s*', '', normalized_txt).strip()
             if cleaned_bullet and cleaned_bullet not in security_requirements: 
                 security_requirements.append(cleaned_bullet)
@@ -512,8 +507,8 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
 
     if "8.securityrequirements" in lower_normalized or p.style.name.startswith("Heading"): continue
 
-    # Dynamic Assessment Scope Stream Overwrites (Comma-independent matching fallback)
-    if "scopeoftheservices1.1" in lower_normalized or "insertallunderbriefofworkassignmentundercategoryb1.scopeoftheservices1.1" in lower_normalized or "copyfromwab1.1scope" in lower_normalized:
+    # Dynamic Assessment Scope Stream Overwrites
+    if "insertallunderbriefofworkassignmentundercategoryb1.scopeoftheservices1.1" in lower_normalized or "copyfromwab1.1scope" in lower_normalized:
         p.text = ""
         current_anchor = p
         if assessment_scope_text:
@@ -550,26 +545,12 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
     elif "copy from WAB, 4.1.1 Current Environment Description" in p.text or "copy from WAB, 9.1 System Description" in p.text:
         p.text = system_description_text
         
-    # LOCALIZED TARGET CHECKPOINT: Strict matching prevents structural bleeding into non-target grids
-    elif "numbered rows" in p.text.lower() and "copy from follow up plan" in p.text.lower():
+    # Strict Finding Table Injections Block
+    elif "copy from follow up plan" in p.text or "copy from code review" in p.text:
         if "v numbered" in p.text.lower(): target_source = v_vulnerabilities
         elif "a numbered" in p.text.lower(): target_source = a_vulnerabilities
+        else: target_source = c_vulnerabilities
         
-        current_node = p._p.getnext()
-        while current_node is not None and not isinstance(current_node, CT_Tbl):
-            current_node = current_node.getnext()
-            
-        if current_node is not None and current_node in tbl_index_map:
-            target_table = doc.tables[list(tbl_index_map.keys()).index(current_node)]
-            for row_item in target_source:
-                new_row = target_table.add_row()
-                for cell_idx, val in enumerate(row_item):
-                    if cell_idx < len(new_row.cells):
-                        apply_text_styling_and_borders(new_row.cells[cell_idx], str(val))
-        p.text = ""
-        
-    elif "c numbered rows" in p.text.lower() and "code review" in p.text.lower():
-        target_source = c_vulnerabilities
         current_node = p._p.getnext()
         while current_node is not None and not isinstance(current_node, CT_Tbl):
             current_node = current_node.getnext()
@@ -597,6 +578,7 @@ for table in doc.tables:
     if len(table.rows) == 0 or len(table.rows[0].cells) == 0: continue
     first_row_text = "".join(cell.text.lower() for cell in table.rows[0].cells)
     
+    # Check 1: Instructional placeholder matching rules for Meta Administrative tables
     if "copy table contents from sa report" in first_row_text:
         try:
             table.cell(0, 0).text = "Version 0.1"
@@ -621,6 +603,9 @@ for table in doc.tables:
             apply_text_styling_and_borders(table.cell(1, 3), "Document Creation")
         except Exception: pass
         continue
+
+    # Skip scanning vulnerability content blocks for metadata injection routines
+    if "affected it systems" in first_row_text: continue
 
     for row in table.rows:
         row_header_clean = row.cells[0].text.lower().replace(" ", "").replace(",", "").replace("-", "")
