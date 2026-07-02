@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SRA Report Automation Pipeline Hub</title>
-    <!-- Tailwind CSS for sleek production look -->
+    <!-- Tailwind CSS for production UI -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Pyodide Core Engine for Serverless Client-Side Python Execution -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
@@ -49,7 +49,7 @@
                 </div>
             </section>
 
-            <!-- MANDATORY DATA SOURCE FILE UPLOADS -->
+            <!-- DATA SOURCE FILE UPLOADS -->
             <section class="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-xl space-y-4">
                 <h2 class="text-xl font-bold text-white mb-2">Mandatory Source Submissions</h2>
                 <p class="text-xs text-slate-400 mb-4">Note: The base template file must be placed in your repository root folder named exactly <code class="text-blue-400">new SRA report template.docx</code>.</p>
@@ -279,8 +279,6 @@ def insert_paragraph_after(paragraph, text, style=None):
 def parse_excel_followup_source(xlsx_path, prefix_filter, global_metrics, domain_matrix, forced_domain_id=None):
     groups = {}
     wb = load_workbook(xlsx_path, data_only=True)
-    
-    # Process multi-sheet iterations for the code review logs
     sheets_to_process = wb.sheetnames if prefix_filter == "C" else [wb.active.title]
     
     for sheet_name in sheets_to_process:
@@ -347,24 +345,19 @@ def build_total_vulnerabilities_string(high, medium, low, aoi):
     if medium > 0: parts.append(f"{medium} medium")
     if low > 0: parts.append(f"{low} low risk")
     if aoi > 0: parts.append(f"{aoi} AOI")
-    
     if not parts: return "no vulnerability"
     if len(parts) == 1: return parts[0]
     if len(parts) == 2: return f"{parts[0]} and {parts[1]}"
     return ", ".join(parts[:-1]) + f", and {parts[-1]}"
 
-# Initialize processing metrics mapping frames
 global_metrics = {"high": 0, "medium": 0, "low": 0, "aoi": 0}
 domain_matrix = {k: {"high": 0, "medium": 0, "low": 0, "aoi": 0} for k in [
     "management", "policy", "human", "asset", "access", "crypto", "physical", 
     "operations", "communications", "development", "outsourcing", "incident", "continuity", "compliance"
 ]}
 
-print("Parsing Infrastructure and Vulnerabilities Follow-Up Plan logs...")
 v_vulnerabilities = parse_excel_followup_source(JS_PLAN_NAME, "V", global_metrics, domain_matrix)
 a_vulnerabilities = parse_excel_followup_source(JS_PLAN_NAME, "A", global_metrics, domain_matrix)
-
-print("Parsing Source Code Review logs across all available sheet tabs...")
 c_vulnerabilities = parse_excel_followup_source(JS_CODE_NAME, "C", global_metrics, domain_matrix, forced_domain_id="development")
 
 system_description_text = ""
@@ -372,10 +365,9 @@ security_requirements = []
 assessment_scope_text = []
 assessment_objective_text = []
 
-print("Extracting Scope, Objective, and Baseline elements via isolated State Machine...")
+print("Extracting verified structural boundaries from WAB document processing context...")
 wab_doc = Document(JS_WAB_NAME)
-capture_desc, capture_req = False, False
-capture_scope, capture_objective = False, False
+state = "SEEKING"
 
 for p in wab_doc.paragraphs:
     txt = p.text.strip()
@@ -384,58 +376,44 @@ for p in wab_doc.paragraphs:
     normalized_txt = txt.replace('\\xa0', ' ').strip()
     lower_clean = normalized_txt.lower().replace(" ", "").replace(",", "").replace(":", "")
     
-    # --- State 1: Current Environment Description ---
+    # Global state anchors check logic
     if "4.1.1" in normalized_txt and "currentenvironment" in lower_clean:
-        capture_desc = True
+        state = "CAPTURING_DESC"
         continue
-    elif "4.1.2" in normalized_txt or "projectmanagement" in lower_clean:
-        capture_desc = False
-        
-    if capture_desc:
+    elif state == "CAPTURING_DESC" and ("4.1.2" in normalized_txt or "projectmanagement" in lower_clean):
+        state = "SEEKING"
+
+    if lower_clean == "scopeoftheservices":
+        state = "CAPTURING_SCOPE"
+        continue
+    elif state == "CAPTURING_SCOPE" and normalized_txt.lower().startswith("the scope of the services"):
+        state = "SEEKING"
+
+    if lower_clean == "projectobjectives":
+        state = "CAPTURING_OBJECTIVES"
+        continue
+    elif state == "CAPTURING_OBJECTIVES" and ("projectrequirements" in lower_clean or "4." in lower_clean):
+        state = "SEEKING"
+
+    if "governmentstandards" in lower_clean and "methodologies" in lower_clean:
+        state = "CAPTURING_REQUIREMENTS"
+        continue
+    elif state == "CAPTURING_REQUIREMENTS" and normalized_txt.lower().startswith("where necessary"):
+        state = "SEEKING"
+
+    # Capture extraction processing branches
+    if state == "CAPTURING_DESC":
         if len(normalized_txt) > 2 and not (normalized_txt.startswith("4.1") or normalized_txt.startswith("4.1.1")):
-            if "userrequirements" not in lower_clean and "currentenvironmentdescription" not in lower_clean:
-                system_description_text = normalized_txt if not system_description_text else system_description_text + "\\n" + normalized_txt
-        continue
-
-    # --- State 2: Assessment Scope (Section 1.1) ---
-    if "scopeoftheservices" in lower_clean or "1.1scope" in lower_clean:
-        capture_scope = True
-        capture_objective = False
-        capture_req = False
-        continue
-    elif capture_scope and normalized_txt.lower().startswith("the scope of the services"):
-        capture_scope = False
-
-    if capture_scope:
+            system_description_text = normalized_txt if not system_description_text else system_description_text + "\\n" + normalized_txt
+    elif state == "CAPTURING_SCOPE":
         if not lower_clean.startswith("scope") and "categoryb" not in lower_clean and len(normalized_txt) > 1:
-            assessment_scope_text.append(normalized_txt)
-        continue
-
-    # --- State 3: Assessment Objectives (Section 3) ---
-    if "projectobjectives" in lower_clean or "3.projectobjectives" in lower_clean:
-        capture_objective = True
-        capture_scope = False
-        capture_req = False
-        continue
-    elif capture_objective and ("projectrequirements" in lower_clean or "userrequirements" in lower_clean or "4." in lower_clean or "requirementsfor" in lower_clean):
-        capture_objective = False
-
-    if capture_objective:
+            if not normalized_txt.startswith("As a SOA Contractor"):
+                assessment_scope_text.append(normalized_txt)
+    elif state == "CAPTURING_OBJECTIVES":
         if not lower_clean.startswith("projectobjective") and len(normalized_txt) > 1:
             assessment_objective_text.append(normalized_txt)
-        continue
-
-    # --- State 4: Security Baseline Requirements Anchor Range ---
-    if "thecontractor" in lower_clean and "qualityrequirements" in lower_clean:
-        capture_req = True
-        capture_scope = False
-        capture_objective = False
-        continue
-    elif capture_req and normalized_txt.lower().startswith("where necessary"):
-        capture_req = False
-
-    if capture_req:
-        if "baseline" not in lower_clean and "contractor" not in lower_clean:
+    elif state == "CAPTURING_REQUIREMENTS":
+        if "governmentstandards" not in lower_clean and "thecontractorshallcomply" not in lower_clean:
             cleaned_bullet = re.sub(r'^([ivxLCDM\\d\\a-z\\)\\(\\.\\s]+)[\\)\\.]\\s*', '', normalized_txt).strip()
             if cleaned_bullet and cleaned_bullet not in security_requirements: 
                 security_requirements.append(cleaned_bullet)
@@ -498,6 +476,11 @@ has_populated_section_8 = False
 for p_idx, p in enumerate(list(doc.paragraphs)):
     lower_normalized = p.text.lower().replace(" ", "").replace(",", "")
     
+    # 1. Clear out explicit pointers or text instructions in the prose
+    if "copy from this document table from 1.1 risks assessed" in p.text.lower():
+        p.text = ""
+        continue
+
     if p_idx < 15 and ("may 2026" in p.text.lower() or "june 2026" in p.text.lower()):
         p.text = current_date_text
         for run in p.runs:
@@ -527,21 +510,17 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
         else:
             p.text = "To evaluate security risks and verify regulatory baseline compliance."
 
+    # Dynamic Security Requirements Stream Overwrites
     elif "copyfromwabsection4.4" in lower_normalized or "copyfromwabsection4.1.3" in lower_normalized:
         if not has_populated_section_8:
             has_populated_section_8 = True
             p.text = ""
             current_anchor = p
-            target_list = security_requirements if security_requirements else [
-                "Baseline IT Security Policy;", "IT Security Guidelines;", "Practice Guide for Security Risk Assessment & Audit;",
-                "Practice Guide for Information Security Incident Handling;", "Practice Guide for Penetration Testing;", 
-                "Practice Guide for Website and Web Application Security;", "Practice Guide for Cloud Computing Security;", 
-                "Practice Guide for Mobile Security;", "Practice Guide for Internet of Things Security"
-            ]
-            for item in target_list:
+            for item in security_requirements:
                 current_anchor = insert_paragraph_after(current_anchor, item, style='List Bullet')
         else:
             p.text = ""
+            
     elif "copy from WAB, 4.1.1 Current Environment Description" in p.text or "copy from WAB, 9.1 System Description" in p.text:
         p.text = system_description_text
         
@@ -566,19 +545,11 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
     else:
         run_replace_mechanism(p, replacements)
 
-# Calculate 14 Domain Summary Matrices across Section 1.1 and Section 10 tables
-domain_mapping_keys = [
-    ("managementrespons", "management"), ("itsecuritypolic", "policy"), ("humanresource", "human"),
-    ("assetmanag", "asset"), ("accesscontrol", "access"), ("cryptograph", "crypto"), ("physical", "physical"),
-    ("operation", "operations"), ("communication", "communications"), ("systemacquisition", "development"),
-    ("outsourcing", "outsourcing"), ("incident", "incident"), ("businesscontinuity", "continuity"), ("compliance", "compliance")
-]
-
+# Post-processing pass: Clean instructional reminders from all tables
 for table in doc.tables:
     if len(table.rows) == 0 or len(table.rows[0].cells) == 0: continue
     first_row_text = "".join(cell.text.lower() for cell in table.rows[0].cells)
     
-    # Check 1: Instructional placeholder matching rules for Meta Administrative tables
     if "copy table contents from sa report" in first_row_text:
         try:
             table.cell(0, 0).text = "Version 0.1"
@@ -604,8 +575,14 @@ for table in doc.tables:
         except Exception: pass
         continue
 
-    # Skip scanning vulnerability content blocks for metadata injection routines
     if "affected it systems" in first_row_text: continue
+
+    domain_mapping_keys = [
+        ("managementrespons", "management"), ("itsecuritypolic", "policy"), ("humanresource", "human"),
+        ("assetmanag", "asset"), ("accesscontrol", "access"), ("cryptograph", "crypto"), ("physical", "physical"),
+        ("operation", "operations"), ("communication", "communications"), ("systemacquisition", "development"),
+        ("outsourcing", "outsourcing"), ("incident", "incident"), ("businesscontinuity", "continuity"), ("compliance", "compliance")
+    ]
 
     for row in table.rows:
         row_header_clean = row.cells[0].text.lower().replace(" ", "").replace(",", "").replace("-", "")
