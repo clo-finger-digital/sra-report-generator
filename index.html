@@ -13,7 +13,7 @@
     <div class="max-w-4xl mx-auto px-4 py-12">
         <header class="border-b border-slate-800 pb-6 mb-8">
             <h1 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">SRA Pipeline Hub</h1>
-            <p class="mt-2 text-sm text-slate-400">Compile mandatory WAB Briefs and follow up plans into structural SRA Reports directly in-browser via GitHub Pages</p>
+            <p class="mt-2 text-sm text-slate-400">Compile mandatory WAB Briefs, Vulnerability Plans, and Code Review logs into structured SRA Reports directly via GitHub Pages</p>
         </header>
 
         <main class="space-y-6">
@@ -52,7 +52,7 @@
             <!-- MANDATORY DATA SOURCE FILE UPLOADS -->
             <section class="bg-slate-800 rounded-lg p-6 border border-slate-700 shadow-xl space-y-4">
                 <h2 class="text-xl font-bold text-white mb-2">Mandatory Source Submissions</h2>
-                <p class="text-xs text-slate-400 mb-4">Note: The target template file is pulled directly from the site's repository route branch layout (<code class="text-blue-400">./new_SRA_report_template.docx</code>).</p>
+                <p class="text-xs text-slate-400 mb-4">Note: The target template file is pulled directly from the site's repository tree directory (<code class="text-blue-400">./new SRA report template.docx</code>).</p>
                 
                 <div class="space-y-4">
                     <div class="p-4 bg-slate-950 border border-dashed border-blue-500/50 rounded-lg">
@@ -92,7 +92,7 @@
                 logToConsole("Loading Pyodide WebAssembly Core Engine Architecture...");
                 pyodideModule = await loadPyodide();
                 
-                logToConsole("Configuring package distribution runtime bootstrap manager (micropip)...");
+                logToConsole("Configuring package distribution bootstrap manager (micropip)...");
                 await pyodideModule.loadPackage(["micropip", "pandas"]);
                 
                 logToConsole("Auto-installing file pipeline packages (openpyxl, python-docx)...");
@@ -145,7 +145,7 @@
             const codeFile = await getFileBytes("file_codereview");
 
             if (!wabFile || !planFile || !codeFile) {
-                logToConsole("Validation Failed: Compile aborted. WAB, Follow Up Plan, and Code Review logs are all strictly required.");
+                logToConsole("Validation Failed: Compile aborted. WAB, Follow Up Plan, and Code Review sheets are all strictly required.");
                 alert("Please submit all three mandatory files to run generation.");
                 return;
             }
@@ -161,11 +161,11 @@
 
             logToConsole(`Date Sync: Active generation timestamp set to ${computedDateText}`);
 
-            logToConsole("Fetching base layout SRA template file from GitHub branch tree route...");
+            logToConsole("Fetching base layout SRA template file from GitHub branch route...");
             try {
-                // Dynamically fetch from relative path relative to GitHub pages root path layout
-                const response = await fetch("./new_SRA_report_template.docx");
-                if (!response.ok) throw new Error("Template access error 404. Check that 'new_SRA_report_template.docx' is tracked in repository root branch.");
+                // Escaped spaces tracking for direct GitHub Pages relative repository layout routing matches
+                const response = await fetch("./new%20SRA%20report%20template.docx");
+                if (!response.ok) throw new Error("Template access error 404. Check that 'new SRA report template.docx' is tracked in repository root branch.");
                 const templateBuffer = await response.arrayBuffer();
                 const templateData = new Uint8Array(templateBuffer);
                 
@@ -176,7 +176,6 @@
                 return;
             }
 
-            // Map inputs safely to WASM tracking virtual disk paths
             try { pyodideModule.FS.unlink(wabFile.name); } catch(e) {}
             pyodideModule.FS.writeFile(wabFile.name, wabFile.data);
 
@@ -358,7 +357,7 @@ domain_matrix = {k: {"high": 0, "medium": 0, "low": 0, "aoi": 0} for k in [
     "operations", "communications", "development", "outsourcing", "incident", "continuity", "compliance"
 ]}
 
-print("Parsing Infrastructure and Vulnerabilities Follow-Up Plan logs...")
+print("Parsing Infrastructure and Vulnerabilities Follow-Up Plan log rows...")
 v_vulnerabilities = parse_excel_followup_source(JS_PLAN_NAME, "V", global_metrics, domain_matrix)
 a_vulnerabilities = parse_excel_followup_source(JS_PLAN_NAME, "A", global_metrics, domain_matrix)
 
@@ -370,7 +369,7 @@ security_requirements = []
 assessment_scope_text = []
 assessment_objective_text = []
 
-print("Extracting Scope, Objective, and Baseline ranges from WAB document layout...")
+print("Extracting Scope, Objective, and Baseline elements via isolated State Machine...")
 wab_doc = Document(JS_WAB_NAME)
 capture_desc, capture_req = False, False
 capture_scope, capture_objective = False, False
@@ -382,48 +381,62 @@ for p in wab_doc.paragraphs:
     normalized_txt = txt.replace('\\xa0', ' ').strip()
     lower_clean = normalized_txt.lower().replace(" ", "").replace(",", "").replace(":", "")
     
+    # --- State 1: Current Environment Description ---
     if "4.1.1" in normalized_txt and "currentenvironment" in lower_clean:
         capture_desc = True
         continue
     elif "4.1.2" in normalized_txt or "projectmanagement" in lower_clean:
         capture_desc = False
-
-    if capture_desc and len(normalized_txt) > 2:
-        if not (normalized_txt.startswith("4.1") or normalized_txt.startswith("4.1.1")):
+        
+    if capture_desc:
+        if len(normalized_txt) > 2 and not (normalized_txt.startswith("4.1") or normalized_txt.startswith("4.1.1")):
             if "userrequirements" not in lower_clean and "currentenvironmentdescription" not in lower_clean:
                 system_description_text = normalized_txt if not system_description_text else system_description_text + "\\n" + normalized_txt
-
-    if "scopeoftheservices" in lower_clean:
-        capture_scope = True
         continue
-    elif capture_scope and ("background" in lower_clean or "projectobjectives" in lower_clean or "1.2" in lower_clean):
+
+    # --- State 2: Assessment Scope (Section 1.1) ---
+    if "scopeoftheservices" in lower_clean or "1.1scope" in lower_clean:
+        capture_scope = True
+        capture_objective = False
+        capture_req = False
+        continue
+    elif capture_scope and ("background" in lower_clean or "projectobjectives" in lower_clean or "1.2" in lower_clean or "3.project" in lower_clean):
         capture_scope = False
 
     if capture_scope:
-        if not lower_clean.startswith("scope") and "categoryb" not in lower_clean:
+        if not lower_clean.startswith("scope") and "categoryb" not in lower_clean and len(normalized_txt) > 1:
             assessment_scope_text.append(normalized_txt)
-
-    if "projectobjectives" in lower_clean:
-        capture_objective = True
         continue
-    elif capture_objective and ("projectrequirements" in lower_clean or "userrequirements" in lower_clean or "4." in lower_clean):
+
+    # --- State 3: Assessment Objectives (Section 3) ---
+    if "projectobjectives" in lower_clean or "3.projectobjectives" in lower_clean:
+        capture_objective = True
+        capture_scope = False
+        capture_req = False
+        continue
+    elif capture_objective and ("projectrequirements" in lower_clean or "userrequirements" in lower_clean or "4." in lower_clean or "requirementsfor" in lower_clean):
         capture_objective = False
 
     if capture_objective:
-        if not lower_clean.startswith("projectobjective"):
+        if not lower_clean.startswith("projectobjective") and len(normalized_txt) > 1:
             assessment_objective_text.append(normalized_txt)
+        continue
 
-    # STRICT TERMINATION RANGE AT GATHER
+    # --- State 4: Security Baseline Requirements ---
     if "form" in lower_clean and "securitybaseline" in lower_clean and "assessmentandaudit" in lower_clean:
         capture_req = True
+        capture_scope = False
+        capture_objective = False
         continue
     elif capture_req and "gather" in lower_clean:
         capture_req = False
 
     if capture_req:
         if "baseline" not in lower_clean and "form" not in lower_clean:
-            cleaned_bullet = re.sub(r'^\\([ivxLCDM]+\\)\\s*', '', normalized_txt).strip()
-            if cleaned_bullet: security_requirements.append(cleaned_bullet)
+            # Broad cleaner regex captures Roman numerals (i), alphabetic indices (a.), or numeric symbols cleanly
+            cleaned_bullet = re.sub(r'^([ivxLCDM\\d\\a-z\\)\\(\\.\\s]+)[\\)\\.]\\s*', '', normalized_txt).strip()
+            if cleaned_bullet and cleaned_bullet not in security_requirements: 
+                security_requirements.append(cleaned_bullet)
 
 total_vuln_str = build_total_vulnerabilities_string(global_metrics["high"], global_metrics["medium"], global_metrics["low"], global_metrics["aoi"])
 
@@ -492,7 +505,7 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
 
     if "8.securityrequirements" in lower_normalized or p.style.name.startswith("Heading"): continue
 
-    # Dynamic Scope Assembly Injection
+    # Dynamic Assessment Scope Stream Overwrites
     if "insert all under brief of work assignment under category b, 1. Scope of the services, 1.1".replace(" ", "") in lower_normalized or "copy from WAB, 1.1 Scope".replace(" ", "") in lower_normalized:
         p.text = ""
         current_anchor = p
@@ -502,7 +515,7 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
         else:
             p.text = "The scope of the services covers the security areas specified in S17 and G3 guidelines."
 
-    # Dynamic Objective Assembly Injection
+    # Dynamic Assessment Objective Stream Overwrites
     elif "copy from work assignment under category b, all under 3. Project objectives".replace(" ", "") in lower_normalized or "copy from WAB, 3. Project Objectives".replace(" ", "") in lower_normalized:
         p.text = ""
         current_anchor = p
@@ -529,9 +542,9 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
             p.text = ""
     elif "copy from WAB, 4.1.1 Current Environment Description" in p.text or "copy from WAB, 9.1 System Description" in p.text:
         p.text = system_description_text
-    elif "copy from follow up plan" in p.text:
-        if "v numbered rows" in p.text.lower(): target_source = v_vulnerabilities
-        elif "a numbered rows" in p.text.lower(): target_source = a_vulnerabilities
+    elif "numbered rows" in p.text.lower() or "copy from" in p.text.lower():
+        if "v numbered" in p.text.lower(): target_source = v_vulnerabilities
+        elif "a numbered" in p.text.lower(): target_source = a_vulnerabilities
         else: target_source = c_vulnerabilities
         
         current_node = p._p.getnext()
@@ -549,7 +562,7 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
     else:
         run_replace_mechanism(p, replacements)
 
-# Calculate 14 Domain Summary Matrices
+# Calculate 14 Domain Summary Matrices across Section 1.1 and Section 10 tables
 domain_mapping_keys = [
     ("managementrespons", "management"), ("itsecuritypolic", "policy"), ("humanresource", "human"),
     ("assetmanag", "asset"), ("accesscontrol", "access"), ("cryptograph", "crypto"), ("physical", "physical"),
@@ -561,6 +574,32 @@ for table in doc.tables:
     if len(table.rows) == 0 or len(table.rows[0].cells) == 0: continue
     first_row_text = "".join(cell.text.lower() for cell in table.rows[0].cells)
     
+    # Check 1: Instructional placeholder matching rules for Meta Administrative tables
+    if "copy table contents from sa report" in first_row_text:
+        try:
+            table.cell(0, 0).text = "Version 0.1"
+            table.cell(1, 0).text = "Role"; table.cell(1, 1).text = "Name"; table.cell(1, 2).text = "Action"; table.cell(1, 3).text = "Date"
+            apply_text_styling_and_borders(table.cell(2, 0), "Created by")
+            apply_text_styling_and_borders(table.cell(2, 1), company_name)
+            apply_text_styling_and_borders(table.cell(2, 2), "Document Revision")
+            apply_text_styling_and_borders(table.cell(2, 3), current_date_numeric)
+            apply_text_styling_and_borders(table.cell(3, 0), "Approved by")
+            apply_text_styling_and_borders(table.cell(3, 1), "")
+            apply_text_styling_and_borders(table.cell(3, 2), "Document Approval")
+            apply_text_styling_and_borders(table.cell(3, 3), "")
+        except Exception: pass
+        continue
+
+    elif "copy row contents from sa report document change control" in first_row_text:
+        try:
+            table.cell(0, 0).text = "Version"; table.cell(0, 1).text = "Date"; table.cell(0, 2).text = "Author"; table.cell(0, 3).text = "Summary of Changes"
+            apply_text_styling_and_borders(table.cell(1, 0), "0.1")
+            apply_text_styling_and_borders(table.cell(1, 1), current_date_numeric)
+            apply_text_styling_and_borders(table.cell(1, 2), company_name)
+            apply_text_styling_and_borders(table.cell(1, 3), "Document Creation")
+        except Exception: pass
+        continue
+
     for row in table.rows:
         row_header_clean = row.cells[0].text.lower().replace(" ", "").replace(",", "").replace("-", "")
         matched_domain_id = next((internal_id for prefix, internal_id in domain_mapping_keys if prefix in row_header_clean), None)
@@ -583,19 +622,6 @@ for table in doc.tables:
         for cell in row.cells:
             for cell_p in cell.paragraphs: run_replace_mechanism(cell_p, replacements)
 
-    if "document revision" in first_row_text or "created by" in first_row_text:
-        try:
-            table.cell(0, 0).text = "Version 0.1"
-            table.cell(1, 0).text = "Role"; table.cell(1, 1).text = "Name"; table.cell(1, 2).text = "Action"; table.cell(1, 3).text = "Date"
-            table.cell(2, 0).text = "Created by"; table.cell(2, 1).text = company_name; table.cell(2, 2).text = "Document Revision"; table.cell(2, 3).text = current_date_numeric
-            table.cell(3, 0).text = "Approved by"; table.cell(3, 1).text = ""; table.cell(3, 2).text = "Document Approval"; table.cell(3, 3).text = ""                 
-        except Exception: pass
-    elif "summary of changes" in first_row_text or "author" in first_row_text:
-        try:
-            table.cell(0, 0).text = "Version"; table.cell(0, 1).text = "Date"; table.cell(0, 2).text = "Author"; table.cell(0, 3).text = "Summary of Changes"
-            table.cell(1, 0).text = "0.1"; table.cell(1, 1).text = current_date_numeric; table.cell(1, 2).text = company_name; table.cell(1, 3).text = "Document Creation"
-        except Exception: pass
-
 doc.save("Generated_SRA_Report_Final.docx")
 print("SRA Core Report Compilation Complete.")
 `;
@@ -611,7 +637,7 @@ print("SRA Core Report Compilation Complete.")
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
-                logToConsole("Success: SRA Report successfully downloaded directly to local storage!");
+                logToConsole("Success: SRA Report compiled and downloaded directly to local storage!");
             } catch (err) {
                 logToConsole("Execution Error: " + err.message);
             }
