@@ -1,533 +1,472 @@
-# ==============================================================================
-# STEP 1: INITIALIZATION & ENVIRONMENT CONFIGURATION
-# ==============================================================================
 import os
 import sys
+import subprocess
+
+# --- Automated Dependency Bootstrapper ---
+REQUIRED_PACKAGES = ["Flask", "python-docx", "openpyxl", "werkzeug"]
+
+def bootstrap_dependencies():
+    """Checks and automatically installs any missing Python packages in the environment."""
+    for package in REQUIRED_PACKAGES:
+        try:
+            # Map programmatic import names to package installation requirements
+            if package == "python-docx":
+                import docx
+            else:
+                __import__(package.lower())
+        except ImportError:
+            print(f"[*] Package '{package}' is missing. Bootstrapping installation...")
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+                print(f"[+] Successfully installed '{package}'")
+            except Exception as e:
+                print(f"[-] Critical Error: Failed to bootstrap package '{package}'. Reason: {e}")
+                sys.exit(1)
+
+# Execute the self-installation bootstrap sequence prior to importing library components
+bootstrap_dependencies()
+
 import re
-import pandas as pd
+import io
+import datetime
+from flask import Flask, request, jsonify, send_file
+from werkzeug.utils import secure_filename
+from docx import Document
+from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from openpyxl import load_workbook
+from docx.oxml import CT_Tbl, OxmlElement
+from docx.oxml.ns import qn
 
-try:
-    from docx import Document
-    from docx.shared import Pt, RGBColor
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
-    from docx.oxml import parse_xml
-    from docx.oxml.ns import nsdecls
-except ImportError:
-    print("Installing python-docx dependency layer...")
-    import subprocess
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "python-docx"])
-    from docx import Document
-    from docx.shared import Pt, RGBColor
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
-    from docx.oxml import parse_xml
-    from docx.oxml.ns import nsdecls
+app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32MB Capacity
+app.config['UPLOAD_FOLDER'] = '/tmp' if os.name != 'nt' else '.'
 
-# ==============================================================================
-# STEP 2: OPENXML STYLING COMPONENT ENGINE
-# ==============================================================================
-def apply_border(cell, color="000000", size="4", thick=False):
-    """
-    Directly mutates the OpenXML cell properties schema to draw borders.
-    """
-    tcPr = cell._element.get_or_add_tcPr()
-    border_val = "thick" if thick else "single"
-    hex_color = color.lstrip('#')
-    tcBorders_xml = (
-        f'<w:tcBorders {nsdecls("w")}>\n'
-        f'  <w:top w:val="{border_val}" w:sz="{size}" w:color="{hex_color}"/>\n'
-        f'  <w:left w:val="{border_val}" w:sz="{size}" w:color="{hex_color}"/>\n'
-        f'  <w:bottom w:val="{border_val}" w:sz="{size}" w:color="{hex_color}"/>\n'
-        f'  <w:right w:val="{border_val}" w:sz="{size}" w:color="{hex_color}"/>\n'
-        f'</w:tcBorders>'
-    )
-    tcPr.append(parse_xml(tcBorders_xml))
+TEMPLATE_FILENAME = "new_SRA_report_template.docx"
 
-# ==============================================================================
-# STEP 3: WORKSPACE SCANNER & BINDING ENGINE
-# ==============================================================================
-def identify_data_sources():
-    print("Scanning directory workspace via strict filename anchor alignment...")
-    all_files = os.listdir(".")
+def normalize_domain_key(text):
+    if not text: return "compliance"
+    t = str(text).strip().lower().replace(" ", "").replace(",", "").replace("-", "")
+    if "managementrespons" in t: return "management"
+    if "itsecuritypolic" in t: return "policy"
+    if "humanresource" in t: return "human"
+    if "assetmanag" in t: return "asset"
+    if "accesscontrol" in t: return "access"
+    if "cryptograph" in t: return "crypto"
+    if "physical" in t: return "physical"
+    if "operation" in t: return "operations"
+    if "communication" in t: return "communications"
+    if "systemacquisition" in t or "developmentandmaintenance" in t: return "development"
+    if "outsourcing" in t: return "outsourcing"
+    if "incident" in t: return "incident"
+    if "businesscontinuity" in t or "aspectsofbc" in t: return "continuity"
+    if "compliance" in t: return "compliance"
+    return "compliance"
+
+def apply_text_styling_and_borders(cell, text, is_header=False, center=False):
+    cell.text = ""
+    p = cell.paragraphs[0]
+    if center:
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p.add_run(text)
+    run.font.name = 'Times New Roman'
+    run.font.size = Pt(10)
+    if is_header:
+        run.bold = True
+        
+    tcPr = cell._tc.get_or_add_tcPr()
+    tcBorders = OxmlElement('w:tcBorders')
+    for border_name in ['top', 'left', 'bottom', 'right']:
+        border = OxmlElement(f'w:{border_name}')
+        border.set(qn('w:val'), 'single')
+        border.set(qn('w:sz'), '4')
+        border.set(qn('w:space'), '0')
+        border.set(qn('w:color'), 'auto')
+        tcBorders.append(border)
+    tcPr.append(tcBorders)
+
+def insert_paragraph_after(paragraph, text, style=None):
+    doc_instance = paragraph.part.document
+    new_p = doc_instance.add_paragraph(style=style)
+    new_p.text = text
+    p_element = paragraph._p
+    p_element.addnext(new_p._p)
+    return new_p
+
+def parse_excel_followup_source(xlsx_path, sys_abbr, global_metrics, domain_matrix, prefix_filter):
+    groups = {}
+    wb = load_workbook(xlsx_path, data_only=True)
+    sheet = wb.active
     
-    wab_path = None
-    sra_template_path = None
-    inventory_path = None
-    vulnerability_path = None
-    questions_path = None
-    code_review_paths = []
+    for row_idx, row in enumerate(sheet.iter_rows(values_only=True)):
+        if row_idx < 2 or row[2] is None: continue
+        obs_num = str(row[2]).strip().upper()
+        
+        if not obs_num.startswith(prefix_filter.upper()): continue
+        
+        system_affected = sys_abbr
+        raw_ip = str(row[3]).strip() if row[3] is not None else ""
+        raw_port = str(row[4]).strip() if (len(row) > 4 and row[4] is not None) else ""
+        
+        if raw_ip and raw_port and ":" not in raw_ip and str(raw_port) not in raw_ip:
+            asset_location = f"{raw_ip}:{raw_port}"
+        else:
+            asset_location = raw_ip if raw_ip else "System Codebase" if prefix_filter == "C" else sys_abbr
 
-    for f in all_files:
-        if f.endswith(".docx") and not f.startswith("~$") and "generated" not in f.lower():
-            if "v2" in f.lower() or f == "EDB (SEMIS) SRA report v2.docx":
-                sra_template_path = f
-            elif "wab" in f.lower() or "assignment" in f.lower():
-                wab_path = f
+        vuln_name = str(row[8]).strip() if row[8] is not None else ""    
+        threat_desc = str(row[9]).strip() if row[9] is not None else ""  
+        reremediation = str(row[10]).strip() if row[10] is not None else "" 
+        severity = str(row[11]).strip() if row[11] is not None else "Low" 
+        raw_domain = str(row[5]).strip() if (len(row) > 5 and row[5] is not None) else "Compliance"
+        
+        sev_title = severity.strip().title()
+        if "aoi" in severity.lower(): sev_title = "AOI"
+        sev_key = "aoi" if sev_title == "AOI" else sev_title.lower()
 
-    if not sra_template_path:
-        for f in all_files:
-            if f.endswith(".docx") and not f.startswith("~$") and "template" in f.lower():
-                sra_template_path = f
-                
-    for f in all_files:
-        if f.endswith(".xlsx") and not f.startswith("~$") and "generated" not in f.lower():
-            f_lower = f.lower()
-            if "questions" in f_lower or "list of questions" in f_lower or "sraa" in f_lower:
-                questions_path = f
-            elif "asset" in f_lower or "inventory" in f_lower or "valuation" in f_lower:
-                inventory_path = f
-            elif "vulnerability" in f_lower or "pentest" in f_lower:
-                vulnerability_path = f
-            elif "code review" in f_lower:
-                code_review_paths.append(f)
+        if sev_title == "AOI":
+            combined_risk_rating = "AOI"
+        else:
+            combined_risk_rating = f"{sev_title}\n[{sev_title},{sev_title}]"
 
-    return {
-        "wab": wab_path, "sra_template": sra_template_path, "inventory": inventory_path,
-        "vulnerability": vulnerability_path, "questions": questions_path, "code_reviews": code_review_paths
-    }
+        unique_hash_key = (vuln_name.lower().strip(), threat_desc.lower().strip())
 
-# ==============================================================================
-# STEP 4: TELEMETRY EXTRACTION ENGINE
-# ==============================================================================
-def process_dynamic_telemetry(paths, company_name, company_abbr):
-    print("\nRunning live analytics over classified source components...")
+        if unique_hash_key not in groups:
+            groups[unique_hash_key] = {
+                "sys": system_affected,
+                "locations": [asset_location],
+                "name": vuln_name,
+                "threat": threat_desc,
+                "rating": combined_risk_rating,
+                "fix": reremediation,
+                "sev_key": sev_key,
+                "domain": raw_domain
+            }
+        else:
+            if asset_location not in groups[unique_hash_key]["locations"]:
+                groups[unique_hash_key]["locations"].append(asset_location)
+
+        if sev_key in global_metrics:
+            global_metrics[sev_key] += 1
+        
+        dom_mapped_key = normalize_domain_key(raw_domain)
+        if sev_key in domain_matrix[dom_mapped_key]:
+            domain_matrix[dom_mapped_key][sev_key] += 1
+            
+    return [[item["sys"], ", ".join(item["locations"]), item["name"], item["threat"], item["rating"], item["fix"]] for item in groups.values()]
+
+def build_total_vulnerabilities_string(high, medium, low, aoi):
+    parts = []
+    if high > 0: parts.append(f"{high} high")
+    if medium > 0: parts.append(f"{medium} medium")
+    if low > 0: parts.append(f"{low} low risk")
+    if aoi > 0: parts.append(f"{aoi} AOI")
     
-    def read_and_align_sheet(file_path, landmarks, sheet_idx=0):
-        try:
-            df_raw = pd.read_excel(file_path, header=None, sheet_name=sheet_idx)
-            header_row_idx = None
-            for idx, row in df_raw.iterrows():
-                row_str = " ".join(row.fillna("").astype(str))
-                if any(x in row_str for x in landmarks):
-                    header_row_idx = idx
-                    break
-            if header_row_idx is None: header_row_idx = 0 
-            df_aligned = pd.read_excel(file_path, skiprows=header_row_idx, sheet_name=sheet_idx)
-            df_aligned.columns = [str(c).strip() for c in df_aligned.columns]
-            return df_aligned
-        except Exception:
-            return pd.DataFrame()
+    if not parts: return "no vulnerability"
+    if len(parts) == 1: return parts[0]
+    if len(parts) == 2: return f"{parts[0]} and {parts[1]}"
+    return ", ".join(parts[:-1]) + f", and {parts[-1]}"
 
-    testee_name, testee_abbr = "Education Bureau", "EDB"
-    sys_abbr, sys_name = "SEMIS", "Special Education Management Information System"
-    scope_paragraphs, objective_paragraphs, security_requirements = [], [], []
-    system_description_text = ""
-    asset_rows = []
+@app.route('/api/generate-sra', methods=['POST'])
+def handle_sra_generation_pipeline():
+    # Enforce Core 3-Source Input Payload Checkpoints
+    if 'file_wab' not in request.files or 'file_plan' not in request.files or 'file_codereview' not in request.files:
+        return jsonify({"error": "Missing mandatory assets. WAB (.docx), Follow-Up Plan (.xlsx), and Code Review (.xlsx) are all required."}), 400
+        
+    wab_file = request.files['file_wab']
+    plan_file = request.files['file_plan']
+    code_file = request.files['file_codereview']
 
-    W_NAMESPACE = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    company_name = request.form.get("company_name", "SunnyVision Limited")
+    company_abbr = request.form.get("company_abbr", "SV")
+    sys_name = request.form.get("system_name", "Digital Works Supervision System")
+    sys_abbr = request.form.get("system_abbr", "DWSS")
+    testee_name = request.form.get("testee_name", "Architectural Services Department")
+    testee_abbr = request.form.get("testee_abbr", "ArchSD")
+    
+    today = datetime.date.today()
+    current_date_text = today.strftime("%B %Y")
+    current_date_numeric = today.strftime("%d-%m-%Y")
 
-    if paths["wab"]:
-        try:
-            wab_doc = Document(paths["wab"])
-            for p in wab_doc.paragraphs:
-                text_clean = p.text.strip()
-                if "Bureau/Department :" in text_clean:
-                    testee_name = text_clean.split(":")[-1].strip()
-                    break
-            abbr_match = re.findall(r'\(([A-Z]{2,6})\)', testee_name)
-            if abbr_match: 
-                testee_abbr = abbr_match[0]
-                testee_name = testee_name.split('(')[0].strip()
+    wab_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(wab_file.filename))
+    plan_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(plan_file.filename))
+    code_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(code_file.filename))
+    output_path = os.path.join(app.config['UPLOAD_FOLDER'], f"SRA_Report_{sys_abbr}_{today.strftime('%Y%m%d')}.docx")
 
-            capture_scope, capture_obj, capture_desc, capture_req = False, False, False, False
-            for p in wab_doc.paragraphs:
-                txt = "".join(run.text for run in p.runs).strip()
-                normalized_txt = txt.replace('\xa0', ' ').strip()
-                
-                if "SCOPE OF THE SERVICES" in normalized_txt:
-                    capture_scope = True
-                    continue
-                elif "BACKGROUND" in normalized_txt:
-                    capture_scope = False
+    wab_file.save(wab_path)
+    plan_file.save(plan_path)
+    code_file.save(code_path)
 
-                if "PROJECT OBJECTIVES" in normalized_txt:
-                    capture_obj = True
-                    continue
-                elif "PROJECT REQUIREMENTS" in normalized_txt or "USER REQUIREMENTS" in normalized_txt:
-                    capture_obj = False
+    if not os.path.exists(TEMPLATE_FILENAME):
+        return jsonify({"error": f"Base SRA Template layout file target reference '{TEMPLATE_FILENAME}' not found in runtime root tree path."}), 500
 
-                if "4.1.1" in normalized_txt and "Current Environment" in normalized_txt:
-                    capture_desc = True
-                    continue
-                elif "4.1.2" in normalized_txt or "Project Management" in normalized_txt:
-                    capture_desc = False
+    try:
+        global_metrics = {"high": 0, "medium": 0, "low": 0, "aoi": 0}
+        domain_matrix = {k: {"high": 0, "medium": 0, "low": 0, "aoi": 0} for k in [
+            "management", "policy", "human", "asset", "access", "crypto", "physical", 
+            "operations", "communications", "development", "outsourcing", "incident", "continuity", "compliance"
+        ]}
 
-                if "GOVERNMENT STANDARDS, METHODOLOGIES AND QUALITY REQUIREMENTS" in normalized_txt:
-                    capture_req = True
-                    continue
-                elif "PROJECT DELIVERABLES, MILESTONES & IMPLEMENTATION SCHEDULE" in normalized_txt:
-                    capture_req = False
+        v_vulnerabilities = parse_excel_followup_source(plan_path, sys_abbr, global_metrics, domain_matrix, "V")
+        a_vulnerabilities = parse_excel_followup_source(plan_path, sys_abbr, global_metrics, domain_matrix, "A")
+        c_vulnerabilities = parse_excel_followup_source(code_path, sys_abbr, global_metrics, domain_matrix, "C")
 
-                if capture_scope and len(normalized_txt) > 0:
-                    if normalized_txt.startswith("To"):
-                        cleaned_txt = normalized_txt.replace("the systems and their classification specified in Section 2 (“Systems”)", "the selected systems (“Systems”)")
-                        cleaned_txt = re.sub(r'^[\t\s]*\([a-z]\)[\t\s]*', '', cleaned_txt, flags=re.IGNORECASE).strip()
-                        if cleaned_txt and cleaned_txt not in scope_paragraphs:
-                            scope_paragraphs.append(cleaned_txt)
+        # Dynamic State Machine for WAB Extraction Boundaries
+        system_description_text = ""
+        security_requirements = []
+        assessment_scope_text = []
+        assessment_objective_text = []
+        
+        wab_doc = Document(wab_path)
+        capture_desc, capture_req = False, False
+        capture_scope, capture_objective = False, False
 
-                if capture_obj and len(normalized_txt) > 0:
-                    cleaned_txt = re.sub(r'^3\.\d+\s*', '', normalized_txt).strip()
-                    cleaned_txt = re.sub(r'^-\s*', '', cleaned_txt).strip()
-                    if cleaned_txt and cleaned_txt not in objective_paragraphs:
-                        objective_paragraphs.append(cleaned_txt)
+        for p in wab_doc.paragraphs:
+            txt = p.text.strip()
+            if not txt: continue
+            
+            normalized_txt = txt.replace('\xa0', ' ').strip()
+            lower_clean = normalized_txt.lower().replace(" ", "").replace(",", "").replace(":", "")
+            
+            # Context Scope 1: Current Environment Description Section
+            if "4.1.1" in normalized_txt and "Current Environment" in normalized_txt:
+                capture_desc = True
+                continue
+            elif "4.1.2" in normalized_txt or "Project Management" in normalized_txt:
+                capture_desc = False
 
-                if capture_desc and len(normalized_txt) > 2:
-                    if not (normalized_txt.startswith("4.1") or normalized_txt.startswith("4.1.1")):
-                        if "USER REQUIREMENTS" not in normalized_txt and "Current Environment Description" not in normalized_txt:
-                            if not system_description_text:
-                                system_description_text = normalized_txt
-                            else:
-                                system_description_text += "\n" + normalized_txt
+            if capture_desc and len(normalized_txt) > 2:
+                if not (normalized_txt.startswith("4.1") or normalized_txt.startswith("4.1.1")):
+                    if "USER REQUIREMENTS" not in normalized_txt and "Current Environment Description" not in normalized_txt:
+                        system_description_text = normalized_txt if not system_description_text else system_description_text + "\n" + normalized_txt
 
-                if capture_req and len(normalized_txt) > 0:
-                    if normalized_txt.startswith("Where necessary"):
-                        capture_req = False
-                        continue
-                    pPr = p._p.get_or_add_pPr()
-                    numPr = pPr.find(f'{{{W_NAMESPACE}}}numPr')
-                    if numPr is not None:
-                        ilvl = numPr.find(f'{{{W_NAMESPACE}}}ilvl')
-                        if ilvl is not None and ilvl.get(f'{{{W_NAMESPACE}}}val') == "0":
-                            if normalized_txt not in security_requirements:
-                                security_requirements.append(normalized_txt)
-        except Exception: pass
+            # Context Scope 2: Assessment Scope (Section 1.1)
+            if "scopeoftheservices" in lower_clean:
+                capture_scope = True
+                continue
+            elif capture_scope and ("background" in lower_clean or "projectobjectives" in lower_clean or "1.2" in lower_clean):
+                capture_scope = False
 
-    if not system_description_text:
-        system_description_text = "System to support the processing of information of special education support services, and managing the workflow of the application, assessment and approval of special education support services and grants."
+            if capture_scope:
+                if not lower_clean.startswith("scope") and "categoryb" not in lower_clean:
+                    assessment_scope_text.append(normalized_txt)
 
-    if paths["inventory"]:
-        try:
-            inv_df = read_and_align_sheet(paths["inventory"], ["Item", "Role Description", "Hostname"])
-            if not inv_df.empty:
-                col_list = list(inv_df.columns)
-                item_col = next((c for c in col_list if "Item" in c or "No" in c), col_list[1])
-                desc_col = next((c for c in col_list if "Description" in c or "Role" in c), col_list[2])
-                host_col = next((c for c in col_list if "Hostname" in c or "ID" in c or "Tag" in c), col_list[4])
-                ip_col = next((c for c in col_list if "IP" in c or "URL" in c), col_list[5])
-                os_col = next((c for c in col_list if "OS" in c or "Version" in c), col_list[6])
+            # Context Scope 3: Assessment Objectives (Section 3)
+            if "projectobjectives" in lower_clean:
+                capture_objective = True
+                continue
+            elif capture_objective and ("projectrequirements" in lower_clean or "userrequirements" in lower_clean or "4." in lower_clean):
+                capture_objective = False
 
-                for _, row in inv_df.dropna(subset=[item_col]).iterrows():
-                    itm = str(row[item_col]).strip()
-                    if itm.replace('.0','').isdigit() or len(itm) <= 2:
-                        asset_rows.append([
-                            itm.replace('.0',''), str(row[desc_col]).strip(), str(row[host_col]).strip(), 
-                            str(row[ip_col]).strip().replace("\n", " "), str(row[os_col]).strip()
-                        ])
-        except Exception: pass
+            if capture_objective:
+                if not lower_clean.startswith("projectobjective"):
+                    assessment_objective_text.append(normalized_txt)
 
-    op_sec_counts = {"High": 0, "Medium": 0, "Low": 0, "AOI": 0}
-    vulnerability_rows, penetration_rows = [], []
+            # Context Scope 4: Security Baseline Extraction Boundary Rules
+            if "form" in lower_clean and "securitybaseline" in lower_clean and "assessmentandaudit" in lower_clean:
+                capture_req = True
+                continue
+            elif capture_req and "gather" in lower_clean:
+                capture_req = False
 
-    if paths["vulnerability"]:
-        try:
-            xl = pd.ExcelFile(paths["vulnerability"])
-            s9_df = read_and_align_sheet(paths["vulnerability"], ["Observe", "Findings#", "Protocol"], sheet_idx=xl.sheet_names[0])
-            if not s9_df.empty:
-                col_list = list(s9_df.columns)
-                id_col = next((c for c in col_list if "Findings#" in c or "Observe" in c), col_list[1])
-                asset_col = next((c for c in col_list if "Asset" in c or "System/" in c), col_list[2])
-                vun_col = next((c for c in col_list if "Vulnerability" in c or "Observation" in c or "Risk Name" in c), col_list[7])
-                threat_col = next((c for c in col_list if "Threat" in c or "Description" in c or "Details" in c), col_list[8])
-                rate_col = next((c for c in col_list if "Rating" in c or "Level" in c or "Risk Level" in c), col_list[10])
-                action_col = next((c for c in col_list if "Action" in c or "plan" in c), col_list[9])
-                domain_col = next((c for c in col_list if "Domain" in c), None)
+            if capture_req:
+                if "baseline" not in lower_clean and "form" not in lower_clean:
+                    cleaned_bullet = re.sub(r'^\([ivxLCDM]+\)\s*', '', normalized_txt).strip()
+                    if cleaned_bullet: security_requirements.append(cleaned_bullet)
 
-                if domain_col and rate_col:
-                    filter_mask = s9_df[domain_col].astype(str).str.contains('Opreation|Operation|Infrastructure', na=False, case=False)
-                    for rating in op_sec_counts.keys():
-                        matched_count = len(s9_df[filter_mask & (s9_df[rate_col].astype(str).str.strip().str.lower() == rating.lower())])
-                        op_sec_counts[rating] = int(matched_count)
+        total_vuln_str = build_total_vulnerabilities_string(global_metrics["high"], global_metrics["medium"], global_metrics["low"], global_metrics["aoi"])
+        
+        replacements = [
+            ("*company name* Limited", company_name),
+            ("*company name*", company_name),
+            ("company name limited", company_name),
+            ("company name", company_name),
+            ("information system name (information system abbreviation)", f"{sys_name} ({sys_abbr})"),
+            ("*(INFORMATION SYSTEM ABBREVIATION)*", sys_abbr),
+            ("(INFORMATION SYSTEM ABBREVIATION)", sys_abbr),
+            ("INFORMATION SYSTEM ABBREVIATION", sys_abbr),
+            ("information system name", sys_name),
+            ("information system abbreviation", sys_abbr),
+            ("company name (company abbreviation)", f"{company_name} ({company_abbr})"),
+            ("company abbreviation", company_abbr),
+            ("COMPANY ABBREVIATION", company_abbr),
+            ("testee name (testee abbreviation)", f"{testee_name} ({testee_abbr})"),
+            ("testee abbreviation", testee_abbr),
+            ("TESTEE ABBREVIATION", testee_abbr),
+            ("testee name", testee_name),
+            ("*testee abbreviation*", testee_abbr),
+            ("May 2026", current_date_text),
+            ("June 2026", current_date_text),
+            ("*grand total items*", total_vuln_str),
+            ("*grand total items items*", total_vuln_str)
+        ]
 
-                for _, row in s9_df.dropna(subset=[id_col]).iterrows():
-                    f_id = str(row[id_col]).strip()
-                    if f_id == 'nan' or not f_id: continue
-                    raw_rtg = str(row[rate_col]).strip() if rate_col in s9_df.columns else "Low"
-                    norm_rtg = "AOI" if "aoi" in raw_rtg.lower() or "interest" in raw_rtg.lower() else raw_rtg.capitalize()
-                    
-                    raw_ips = str(row[asset_col]).strip().replace(" ", "").split(",")
-                    formatted_ips = "\n".join(raw_ips)
+        doc = Document(TEMPLATE_FILENAME)
+        
+        def run_replace_mechanism(p, lookup_tuples):
+            full_text = "".join(run.text for run in p.runs)
+            if not full_text.strip(): return
+            if re.match(r'^\d+(\.\d+)*\s*', full_text.strip()) or p.style.name.startswith("Heading"): return
+            
+            modified = False
+            for k, val in lookup_tuples:
+                if k.lower() in full_text.lower() or k.strip("*").strip().lower() in full_text.lower():
+                    pattern = re.compile(re.escape(k), re.IGNORECASE)
+                    full_text = pattern.sub(val, full_text)
+                    modified = True
+            if modified or "*" in full_text:
+                full_text = full_text.replace("*", "").strip()
+                if p.runs:
+                    p.runs[0].text = full_text
+                    for r in p.runs[1:]: r.text = ""
+                else: p.text = full_text
 
-                    record = [
-                        sys_abbr, formatted_ips, str(row[vun_col]).strip(),
-                        str(row[threat_col]).strip(), f"{norm_rtg} [{norm_rtg},{norm_rtg}]", str(row[action_col]).strip()
+        # Overwrite Global Document Section Headers
+        for section in doc.sections:
+            for header_p in section.header.paragraphs: run_replace_mechanism(header_p, replacements)
+            for footer_p in section.footer.paragraphs: run_replace_mechanism(footer_p, replacements)
+
+        body_elements = doc.element.body
+        tbl_index_map = {child: idx for idx, child in enumerate(body_elements) if isinstance(child, CT_Tbl)}
+        has_populated_section_8 = False
+
+        for p_idx, p in enumerate(list(doc.paragraphs)):
+            lower_normalized = p.text.lower().replace(" ", "").replace(",", "")
+            
+            if p_idx < 15 and ("may 2026" in p.text.lower() or "june 2026" in p.text.lower()):
+                p.text = current_date_text
+                for run in p.runs:
+                    run.font.name = "Times New Roman"
+                    run.font.size = Pt(12)
+                continue
+
+            if "8.securityrequirements" in lower_normalized or p.style.name.startswith("Heading"): continue
+
+            # Dynamic Scope Stream Injection Points
+            if "insert all under brief of work assignment under category b, 1. Scope of the services, 1.1".replace(" ", "") in lower_normalized or "copy from WAB, 1.1 Scope".replace(" ", "") in lower_normalized:
+                p.text = ""
+                current_anchor = p
+                if assessment_scope_text:
+                    for text_line in assessment_scope_text:
+                        current_anchor = insert_paragraph_after(current_anchor, text_line, style='List Bullet')
+                else:
+                    p.text = "The scope of the services covers the security areas specified in S17 and G3 guidelines."
+
+            # Dynamic Objectives Stream Injection Points
+            elif "copy from work assignment under category b, all under 3. Project objectives".replace(" ", "") in lower_normalized or "copy from WAB, 3. Project Objectives".replace(" ", "") in lower_normalized:
+                p.text = ""
+                current_anchor = p
+                if assessment_objective_text:
+                    for text_line in assessment_objective_text:
+                        current_anchor = insert_paragraph_after(current_anchor, text_line, style='List Bullet')
+                else:
+                    p.text = "To evaluate security risks and verify regulatory baseline compliance."
+
+            elif "copyfromwabsection4.4" in lower_normalized or "copyfromwabsection4.1.3" in lower_normalized:
+                if not has_populated_section_8:
+                    has_populated_section_8 = True
+                    p.text = ""
+                    current_anchor = p
+                    target_list = security_requirements if security_requirements else [
+                        "Baseline IT Security Policy;", "IT Security Guidelines;", "Practice Guide for Security Risk Assessment & Audit;",
+                        "Practice Guide for Information Security Incident Handling;", "Practice Guide for Penetration Testing;", 
+                        "Practice Guide for Website and Web Application Security;", "Practice Guide for Cloud Computing Security;", 
+                        "Practice Guide for Mobile Security;", "Practice Guide for Internet of Things Security"
                     ]
-                    if f_id.upper().startswith("V"): vulnerability_rows.append(record)
-                    elif f_id.upper().startswith("A"): penetration_rows.append(record)
-        except Exception: pass
-
-    cr_counts = {"High": 0, "Medium": 0, "Low": 0, "AOI": 0}
-    for f in paths["code_reviews"]:
-        try:
-            xl_file = pd.ExcelFile(f)
-            for sheet in xl_file.sheet_names:
-                df = read_and_align_sheet(f, ["Observe", "Findings#"], sheet_idx=sheet)
-                if not df.empty:
-                    rc = [c for c in df.columns if "Rating" in c or "Level" in c]
-                    if rc:
-                        rc_col = rc[0]
-                        for rating in cr_counts.keys():
-                            matched_len = len(df[df[rc_col].astype(str).str.strip().str.lower() == rating.lower()])
-                            cr_counts[rating] += int(matched_len)
-        except Exception: pass
-
-    total_high = op_sec_counts["High"] + cr_counts["High"]
-    total_med = op_sec_counts["Medium"] + cr_counts["Medium"]
-    total_low = op_sec_counts["Low"] + cr_counts["Low"]
-    total_aoi = op_sec_counts["AOI"] + cr_counts["AOI"]
-
-    return {
-        "testee_name": testee_name, "testee_abbr": testee_abbr, "sys_name": sys_name, "sys_abbr": sys_abbr,
-        "company_name": company_name, "company_abbr": company_abbr, "op_sec": op_sec_counts, "cr": cr_counts,
-        "totals": {"High": total_high, "Medium": total_med, "Low": total_low, "AOI": total_aoi},
-        "grand_total": total_high + total_med + total_low + total_aoi, "vulnerability_rows": vulnerability_rows,
-        "penetration_rows": penetration_rows, "scope_paragraphs": scope_paragraphs, "objective_paragraphs": objective_paragraphs,
-        "system_description": system_description_text, "asset_rows": asset_rows, "security_requirements": security_requirements
-    }
-
-# ==============================================================================
-# STEP 5: COMPILATION & STRUCTURAL CLEANING PIPELINE
-# ==============================================================================
-def output_recreation_report(paths, data, filename="Generated_SRA_Report_Final.docx"):
-    print(f"\nAssembling document parameters -> destination filename: '{filename}'")
-    doc = Document(paths["sra_template"])
-    
-    risk_tier_string = f"{data['totals']['Medium']} Medium, {data['totals']['Low']} low risk and {data['totals']['AOI']} AOI items"
-
-    replacements = {
-        "information system name (information system abbreviation)": f"{data['sys_name']} ({data['sys_abbr']})",
-        "(INFORMATION SYSTEM ABBREVIATION)": data["sys_abbr"],
-        "information system name": data["sys_name"],
-        "SEMISSpW23": data["sys_abbr"],
-        "amount of total items": f"{data['grand_total']} items",
-        "grand total items": risk_tier_string,
-        "company name (company abbreviation)": f"{data['company_name']} ({data['company_abbr']})",
-        "company name": data["company_name"],
-        "company abbreviation": data["company_abbr"],
-        "COMPANY ABBREVIATION": data["company_abbr"],
-        "testee name (testee abbreviation)": f"{data['testee_name']} ({data['testee_abbr']})",
-        "testee abbreviation": data["testee_abbr"]
-    }
-
-    def update_cell_text_preserving_runs(cell, new_text, font_name="Times New Roman", size_pt=10, align_center=False):
-        if len(cell.paragraphs) == 0:
-            cell.add_paragraph()
-        p = cell.paragraphs[0]
-        if align_center:
-            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        if len(p.runs) == 0:
-            p.add_run(new_text)
-        else:
-            p.runs[0].text = new_text
-            for r in p.runs[1:]: r.text = ""
-        for paragraph in cell.paragraphs:
-            for run in paragraph.runs:
-                run.font.name = font_name
-                run.font.size = Pt(size_pt)
-                run.font.color.rgb = RGBColor(0, 0, 0)
-
-    def format_cell_text(cell, font_name="Times New Roman", size_pt=10, align_center=False, bold=False, color_rgb=None):
-        for paragraph in cell.paragraphs:
-            if align_center:
-                paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            for run in paragraph.runs:
-                run.font.name = font_name
-                run.font.size = Pt(size_pt)
-                run.bold = bold
-                if color_rgb is not None: run.font.color.rgb = color_rgb
-
-    def remove_asterisk_pointers(text):
-        """Removes asterisk-enclosed instructions and structural guides."""
-        text = re.sub(r'\*.*?\*', '', text)
-        return text.strip()
-
-    def replace_text_in_paragraph(p, lookup_dict):
-        full_text = "".join(run.text for run in p.runs)
-        if "4." in full_text and any(term in full_text.lower() for term in ["methodology", "asset", "valuation", "threat", "mapping"]):
-            return
-        for k, v in lookup_dict.items():
-            if k in full_text:
-                full_text = full_text.replace(k, v)
-        full_text = remove_asterisk_pointers(full_text)
-        if len(p.runs) > 0:
-            p.runs[0].text = full_text
-            for r in p.runs[1:]: r.text = ""
-        else:
-            p.text = full_text
-
-    def insert_paragraph_after(paragraph, text, style=None):
-        new_p = doc.add_paragraph(style=style)
-        new_p.text = text
-        p_element = paragraph._p
-        p_element.addnext(new_p._p)
-        return new_p
-
-    # 1. Paragraph Modifications Layer
-    for p_idx, p in enumerate(list(doc.paragraphs)):
-        full_p_text = "".join(run.text for run in p.runs)
-        normalized_p_text = full_p_text.replace('\n', ' ').strip()
-        
-        if 145 <= p_idx <= 165:
-            continue
-
-        if "copy from WAB, 4.1.1 Current Environment Description" in normalized_p_text or "copy from WAB, 9.1 System Description" in normalized_p_text:
-            p.text = remove_asterisk_pointers(data["system_description"])
-            
-        elif "insert all under brief of work assignment under category b, 1. Scope of the services, 1.1" in normalized_p_text:
-            if len(data["scope_paragraphs"]) > 0:
-                p.text = remove_asterisk_pointers(data["scope_paragraphs"][0])
-                p.style = 'List Bullet'
-                current_anchor = p
-                for msg in data["scope_paragraphs"][1:]:
-                    current_anchor = insert_paragraph_after(current_anchor, remove_asterisk_pointers(msg), style='List Bullet')
-            else:
+                    for item in target_list:
+                        current_anchor = insert_paragraph_after(current_anchor, item, style='List Bullet')
+                else:
+                    p.text = ""
+            elif "copy from WAB, 4.1.1 Current Environment Description" in p.text or "copy from WAB, 9.1 System Description" in p.text:
+                p.text = system_description_text
+            elif "copy from follow up plan" in p.text:
+                if "v numbered rows" in p.text.lower(): target_source = v_vulnerabilities
+                elif "a numbered rows" in p.text.lower(): target_source = a_vulnerabilities
+                else: target_source = c_vulnerabilities
+                
+                current_node = p._p.getnext()
+                while current_node is not None and not isinstance(current_node, CT_Tbl):
+                    current_node = current_node.getnext()
+                    
+                if current_node is not None and current_node in tbl_index_map:
+                    target_table = doc.tables[list(tbl_index_map.keys()).index(current_node)]
+                    for row_item in target_source:
+                        new_row = target_table.add_row()
+                        for cell_idx, val in enumerate(row_item):
+                            if cell_idx < len(new_row.cells):
+                                apply_text_styling_and_borders(new_row.cells[cell_idx], str(val))
                 p.text = ""
-                
-        elif "copy from work assignment under category b, all under 3. Project objectives" in normalized_p_text:
-            if len(data["objective_paragraphs"]) > 0:
-                p.text = remove_asterisk_pointers(data["objective_paragraphs"][0])
-                p.style = 'List Bullet'
-                current_anchor = p
-                for msg in data["objective_paragraphs"][1:]:
-                    current_anchor = insert_paragraph_after(current_anchor, remove_asterisk_pointers(msg), style='List Bullet')
             else:
-                p.text = ""
+                run_replace_mechanism(p, replacements)
+
+        # Process 14-Domain Calculations Matrix Tables
+        domain_mapping_keys = [
+            ("managementrespons", "management"), ("itsecuritypolic", "policy"), ("humanresource", "human"),
+            ("assetmanag", "asset"), ("accesscontrol", "access"), ("cryptograph", "crypto"), ("physical", "physical"),
+            ("operation", "operations"), ("communication", "communications"), ("systemacquisition", "development"),
+            ("outsourcing", "outsourcing"), ("incident", "incident"), ("businesscontinuity", "continuity"), ("compliance", "compliance")
+        ]
+
+        for table in doc.tables:
+            if len(table.rows) == 0 or len(table.rows[0].cells) == 0: continue
+            first_row_text = "".join(cell.text.lower() for cell in table.rows[0].cells)
+            
+            for row in table.rows:
+                row_header_clean = row.cells[0].text.lower().replace(" ", "").replace(",", "").replace("-", "")
+                matched_domain_id = next((internal_id for prefix, internal_id in domain_mapping_keys if prefix in row_header_clean), None)
                 
-        elif "copy from WAB section 4.4" in normalized_p_text:
-            p.text = f"{data['company_abbr']} referred to the following documents in conducting the security risk assessment:"
-            current_anchor = p
-            for msg in data["security_requirements"]:
-                current_anchor = insert_paragraph_after(current_anchor, remove_asterisk_pointers(msg), style='List Bullet')
-                
-        elif "copy from follow up plan" in normalized_p_text.lower() or "copy from this document table" in normalized_p_text.lower():
-            p.text = ""
-        else:
-            replace_text_in_paragraph(p, replacements)
+                if matched_domain_id and len(row.cells) >= 5:
+                    counts_map = domain_matrix[matched_domain_id]
+                    apply_text_styling_and_borders(row.cells[1], str(counts_map["high"]), center=True)
+                    apply_text_styling_and_borders(row.cells[2], str(counts_map["medium"]), center=True)
+                    apply_text_styling_and_borders(row.cells[3], str(counts_map["low"]), center=True)
+                    apply_text_styling_and_borders(row.cells[4], str(counts_map["aoi"]), center=True)
+                    continue
+                    
+                if "grandtotal" in row_header_clean and len(row.cells) >= 5:
+                    apply_text_styling_and_borders(row.cells[1], str(global_metrics["high"]), center=True)
+                    apply_text_styling_and_borders(row.cells[2], str(global_metrics["medium"]), center=True)
+                    apply_text_styling_and_borders(row.cells[3], str(global_metrics["low"]), center=True)
+                    apply_text_styling_and_borders(row.cells[4], str(global_metrics["aoi"]), center=True)
+                    continue
 
-    # 2. DOCUMENT CONTROL TABLES UPDATES
-    try:
-        t_signoff = doc.tables[0]
-        t_signoff.cell(0, 0).text = "Version 0.1"
-        t_signoff.cell(1, 0).text = "Role"; t_signoff.cell(1, 1).text = "Name"; t_signoff.cell(1, 2).text = "Action"; t_signoff.cell(1, 3).text = "Date"
-        t_signoff.cell(2, 0).text = "Created by"; t_signoff.cell(2, 1).text = f"{data['company_name']}"; t_signoff.cell(2, 2).text = "Document Revision"; t_signoff.cell(2, 3).text = "22-05-2026"
-        t_signoff.cell(3, 0).text = "Approved by"; t_signoff.cell(3, 1).text = ""; t_signoff.cell(3, 2).text = "Document Approval"; t_signoff.cell(3, 3).text = ""                 
-    except Exception: pass
+                for cell in row.cells:
+                    for cell_p in cell.paragraphs: run_replace_mechanism(cell_p, replacements)
 
-    try:
-        t_revision = doc.tables[1]
-        t_revision.cell(0, 0).text = "Version"; t_revision.cell(0, 1).text = "Date"; t_revision.cell(0, 2).text = "Author"; t_revision.cell(0, 3).text = "Summary of Changes"
-        t_revision.cell(1, 0).text = "0.1"; t_revision.cell(1, 1).text = "22-05-2026"; t_revision.cell(1, 2).text = f"{data['company_name']}"; t_revision.cell(1, 3).text = "Document Creation"
-    except Exception: pass
+            # Re-generate Document Sign-Off / Revisions Controls Meta Tables
+            if "document revision" in first_row_text or "created by" in first_row_text:
+                try:
+                    table.cell(0, 0).text = "Version 0.1"
+                    table.cell(1, 0).text = "Role"; table.cell(1, 1).text = "Name"; table.cell(1, 2).text = "Action"; table.cell(1, 3).text = "Date"
+                    table.cell(2, 0).text = "Created by"; table.cell(2, 1).text = company_name; table.cell(2, 2).text = "Document Revision"; table.cell(2, 3).text = current_date_numeric
+                    table.cell(3, 0).text = "Approved by"; table.cell(3, 1).text = ""; table.cell(3, 2).text = "Document Approval"; table.cell(3, 3).text = ""                 
+                except Exception: pass
+            elif "summary of changes" in first_row_text or "author" in first_row_text:
+                try:
+                    table.cell(0, 0).text = "Version"; table.cell(0, 1).text = "Date"; table.cell(0, 2).text = "Author"; table.cell(0, 3).text = "Summary of Changes"
+                    table.cell(1, 0).text = "0.1"; table.cell(1, 1).text = current_date_numeric; table.cell(1, 2).text = company_name; table.cell(1, 3).text = "Document Creation"
+                except Exception: pass
 
-    vulnerability_table_count = 0
-
-    # 3. EXPLICIT INDEX SEGMENTATION FOR CLASSIFIED TABLES
-    for table_idx, table in enumerate(doc.tables):
-        if len(table.rows) == 0 or len(table.rows[0].cells) == 0: continue
+        return_data = io.BytesIO()
+        with open(output_path, 'rb') as f:
+            return_data.write(f.read())
+        return_data.seek(0)
         
-        if table_idx in [3, 4, 5, 6, 7]:
-            continue
+        return send_file(
+            return_data,
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            as_attachment=True,
+            download_name=os.path.basename(output_path)
+        )
 
-        # Heavy Black Border Profile for Control Blocks
-        elif table_idx in [0, 1]:
-            for row in table.rows:
-                for cell in row.cells:
-                    apply_border(cell, color="000000", size="12", thick=True)
+    except Exception as err:
+        return jsonify({"error": f"Internal system automation crash details: {str(err)}"}), 500
+        
+    finally:
+        # Sandbox unlinking garbage collection
+        for path in [wab_path, plan_path, code_path, output_path]:
+            if os.path.exists(path):
+                try: os.unlink(path)
+                except Exception: pass
 
-        # Standard Office Blue Profile (#4472c4) for Risk Matrices
-        elif table_idx in [2, 10]:
-            for row in table.rows:
-                lbl = row.cells[0].text.lower()
-                if "operations security" in lbl or "1.1 risks assessed" in lbl:
-                    row.cells[0].text = "Operations Security"
-                    update_cell_text_preserving_runs(row.cells[1], str(data["op_sec"]["High"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[2], str(data["op_sec"]["Medium"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[3], str(data["op_sec"]["Low"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[4], str(data["op_sec"]["AOI"]), align_center=True)
-                elif "system acquisition" in lbl:
-                    row.cells[0].text = "System Acquisition, Development and Maintenance"
-                    update_cell_text_preserving_runs(row.cells[1], str(data["cr"]["High"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[2], str(data["cr"]["Medium"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[3], str(data["cr"]["Low"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[4], str(data["cr"]["AOI"]), align_center=True)
-                elif "grand total" in lbl:
-                    row.cells[0].text = "Grand Total"
-                    update_cell_text_preserving_runs(row.cells[1], str(data["totals"]["High"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[2], str(data["totals"]["Medium"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[3], str(data["totals"]["Low"]), align_center=True)
-                    update_cell_text_preserving_runs(row.cells[4], str(data["totals"]["AOI"]), align_center=True)
-            
-            for r_idx, row in enumerate(table.rows):
-                for c_idx, cell in enumerate(row.cells):
-                    apply_border(cell, color="4472c4", size="4", thick=False)
-                    if r_idx > 0:
-                        if c_idx > 0:
-                            update_cell_text_preserving_runs(cell, cell.text.strip(), font_name="Times New Roman", size_pt=10, align_center=True)
-                        else:
-                            update_cell_text_preserving_runs(cell, cell.text.strip(), font_name="Times New Roman", size_pt=10, align_center=False)
-
-        # Findings Projection Matrices
-        elif table_idx in [11, 12]:
-            for row in list(table.rows):
-                cell_text_clean = row.cells[0].text.lower()
-                if "copy from follow up plan" in cell_text_clean or "v numbered rows" in cell_text_clean or "a numbered rows" in cell_text_clean:
-                    table._element.remove(row._element)
-
-            if vulnerability_table_count == 0:
-                target_dataset = data["vulnerability_rows"]
-                vulnerability_table_count += 1
-            else:
-                target_dataset = data["penetration_rows"]
-            
-            for row_data in target_dataset:
-                r_cells = table.add_row().cells
-                for i, val in enumerate(row_data): r_cells[i].text = val
-
-            for r_idx, row in enumerate(table.rows):
-                for c_idx, cell in enumerate(row.cells):
-                    apply_border(cell, color="000000", size="4", thick=False)
-                    if r_idx > 0:
-                        center_flag = (c_idx in [3, 4])
-                        format_cell_text(cell, font_name="Times New Roman", size_pt=9, align_center=center_flag)
-                        cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
-
-        else:
-            if "role description" in table.rows[0].cells[1].text.lower():
-                table.cell(0, 0).text = "Item"; table.cell(0, 1).text = "Asset Description"; table.cell(0, 2).text = "Hostname / ID"; table.cell(0, 3).text = "IP Address / URL"; table.cell(0, 4).text = "OS Version"
-                for asset_row in data["asset_rows"]:
-                    r_cells = table.add_row().cells
-                    for i, val in enumerate(asset_row): r_cells[i].text = val
-            elif "role" in table.rows[0].cells[0].text.lower() and "name" in table.rows[0].cells[1].text.lower() and len(table.rows) <= 2:
-                team_rows = [["Project Manager", f"Representative, {data['company_name']}"], ["Senior Security Auditor", f"Lead Consultant, {data['company_name']}"], ["Technical Auditor Expert", f"Auditor, {data['company_name']}"]]
-                for t_row in team_rows:
-                    r_cells = table.add_row().cells
-                    r_cells[0].text, r_cells[1].text = t_row[0], t_row[1]
-
-            for row in table.rows:
-                for cell in row.cells:
-                    apply_border(cell, color="000000", size="4", thick=False)
-                    cell.text = remove_asterisk_pointers(cell.text)
-                    for p in cell.paragraphs:
-                        replace_text_in_paragraph(p, replacements)
-
-    doc.save(filename)
-    print(f"Compilation finished cleanly -> saved to '{filename}'")
-
-# ==============================================================================
-# STEP 6: INTERACTIVE CONFIGURATION & EXECUTION RUNNER
-# ==============================================================================
-if __name__ == "__main__":
-    print("="*80)
-    print("        SRA REPORT COMPILE WORKSPACE ENVIRONMENT CONTROLLER             ")
-    print("="*80)
-    
-    # Input sections for custom deployment parameters
-    input_company = input("Enter Company Name [Default: SunnyVision Limited]: ").strip()
-    input_abbr = input("Enter Company Abbreviation [Default: SV]: ").strip()
-    
-    company_name = input_company if input_company else "SunnyVision Limited"
-    company_abbr = input_abbr if input_abbr else "SV"
-    
-    nodes = identify_data_sources()
-    telemetry = process_dynamic_telemetry(nodes, company_name, company_abbr)
-    output_recreation_report(nodes, telemetry)
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
