@@ -398,7 +398,7 @@ for p in wab_doc.paragraphs:
     if "governmentstandards" in lower_clean and "methodologies" in lower_clean:
         state = "CAPTURING_REQUIREMENTS"
         continue
-    elif state == "CAPTURING_REQUIREMENTS" and normalized_txt.lower().startswith("where necessary"):
+    elif state == "CAPTURING_REQUIREMENTS" and lower_clean.startswith("wherenecessary"):
         state = "SEEKING"
 
     # Capture extraction processing branches
@@ -441,6 +441,7 @@ replacements = [
     ("*testee abbreviation*", testee_abbr),
     ("May 2026", current_date_text),
     ("June 2026", current_date_text),
+    ("July 2026", current_date_text),
     ("*grand total items*", total_vuln_str),
     ("*grand total items items*", total_vuln_str)
 ]
@@ -476,12 +477,12 @@ has_populated_section_8 = False
 for p_idx, p in enumerate(list(doc.paragraphs)):
     lower_normalized = p.text.lower().replace(" ", "").replace(",", "")
     
-    # 1. Clear out explicit pointers or text instructions in the prose
+    # Global Scrubbing Phase for Specific Pointer and Bracket Placeholders
     if "copy from this document table from 1.1 risks assessed" in p.text.lower():
         p.text = ""
         continue
 
-    if p_idx < 15 and ("may 2026" in p.text.lower() or "june 2026" in p.text.lower()):
+    if p_idx < 15 and ("may 2026" in p.text.lower() or "june 2026" in p.text.lower() or "july 2026" in p.text.lower()):
         p.text = current_date_text
         for run in p.runs:
             run.font.name = "Times New Roman"
@@ -545,7 +546,7 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
     else:
         run_replace_mechanism(p, replacements)
 
-# Post-processing pass: Clean instructional reminders from all tables
+# Calculate Summary Matrices across Domain Blocks
 for table in doc.tables:
     if len(table.rows) == 0 or len(table.rows[0].cells) == 0: continue
     first_row_text = "".join(cell.text.lower() for cell in table.rows[0].cells)
