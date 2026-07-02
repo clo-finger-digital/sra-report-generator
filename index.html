@@ -368,6 +368,7 @@ assessment_objective_text = []
 print("Extracting structural boundaries from WAB document processing context...")
 wab_doc = Document(JS_WAB_NAME)
 state = "SEEKING"
+has_captured_requirements = False
 
 STOP_TRIGGERS = [
     "projectdeliverables", 
@@ -402,7 +403,7 @@ for p in wab_doc.paragraphs:
     elif state == "CAPTURING_OBJECTIVES" and ("projectrequirements" in lower_clean or "4." in lower_clean):
         state = "SEEKING"
 
-    if "governmentstandards" in lower_clean and "methodologies" in lower_clean:
+    if "governmentstandards" in lower_clean and "methodologies" in lower_clean and not has_captured_requirements:
         state = "CAPTURING_REQUIREMENTS"
         continue
 
@@ -410,6 +411,7 @@ for p in wab_doc.paragraphs:
     if state == "CAPTURING_REQUIREMENTS":
         if any(trigger in lower_clean for trigger in STOP_TRIGGERS):
             state = "SEEKING"
+            has_captured_requirements = True
             continue
 
     # Capture extraction processing branches
@@ -425,8 +427,10 @@ for p in wab_doc.paragraphs:
             assessment_objective_text.append(normalized_txt)
     elif state == "CAPTURING_REQUIREMENTS":
         if "governmentstandards" not in lower_clean and "thecontractorshallcomply" not in lower_clean:
-            # Strip standard list bullet characters cleanly
-            cleaned_bullet = re.sub(r'^([ivxLCDM\\d\\a-z\\)\\(\\.\\s*-]+)[\\)\\.]?\\s*', '', normalized_txt).strip()
+            # Bullet stripping regex targeting trailing layout numbers and lists safely
+            cleaned_bullet = re.sub(r'^([ivxLCDM\\d\\)\\(\\.\\s*-]+)[\\)\\.]?\\s+', '', normalized_txt).strip()
+            if not cleaned_bullet:
+                cleaned_bullet = normalized_txt
             if cleaned_bullet and cleaned_bullet not in security_requirements: 
                 security_requirements.append(cleaned_bullet)
 
@@ -524,7 +528,12 @@ for p_idx, p in enumerate(list(doc.paragraphs)):
         if not has_populated_section_8:
             has_populated_section_8 = True
             p.text = ""
-            current_anchor = p
+            
+            # Formulate the initial descriptive introductory prefix sentence
+            intro_sentence = f"{company_abbr} referred to the following documents in conducting the security risk assessment:"
+            current_anchor = insert_paragraph_after(p, intro_sentence, style='Normal')
+            
+            # Loop and append the cleaned document guidelines array items cleanly
             for item in security_requirements:
                 current_anchor = insert_paragraph_after(current_anchor, item, style='List Bullet')
         else:
